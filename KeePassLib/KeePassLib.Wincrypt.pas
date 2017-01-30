@@ -1,4 +1,4 @@
-{   This file is part of KeePass4D.                                       
+{   This file is part of KeePass4D.
 
     KeePass4D is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -111,6 +111,8 @@ type
   TCertBlob = TCryptoApiBlob;
   PCertBlob = ^TCertBlob;
   TCrlBlob = TCryptoApiBlob;
+  TDataBlob = TCryptoApiBlob;
+  PDataBlob = ^TDataBlob;
   TCryptDataBlob = TCryptoApiBlob;
   PCryptDataBlob = ^TCryptDataBlob;
   TCryptHashBlob = TCryptoApiBlob;
@@ -284,10 +286,132 @@ function CryptDuplicateKey(hKey: HCRYPTKEY; pdwReserved: PDWORD; dwFlags: DWORD;
   out phKey: HCRYPTKEY): BOOL; stdcall;
 function CryptDestroyKey(hKey: HCRYPTKEY): BOOL; stdcall;
 
+{ dpapi.h }
+
+const
+
+//
+// Registry value for controlling Data Protection API (DPAPI) UI settings.
+//
+
+  szFORCE_KEY_PROTECTION: PAnsiChar = 'ForceKeyProtection';
+
+  dwFORCE_KEY_PROTECTION_DISABLED     = $0;
+  dwFORCE_KEY_PROTECTION_USER_SELECT  = $1;
+  dwFORCE_KEY_PROTECTION_HIGH         = $2;
+
+//
+// Data protection APIs enable applications to easily secure data.
+//
+// The base provider provides protection based on the users' logon
+// credentials. The data secured with these APIs follow the same
+// roaming characteristics as HKCU -- if HKCU roams, the data
+// protected by the base provider may roam as well. This makes
+// the API ideal for the munging of data stored in the registry.
+//
+
+//
+// Prompt struct -- what to tell users about the access
+//
+type
+  CRYPTPROTECT_PROMPTSTRUCT = record
+    cbSize        : DWORD;
+    dwPromptFlags : DWORD;
+    hwndApp       : HWND;
+    szPrompt      : LPCWSTR;
+  end;
+  TCryptProtectPromptStruct = CRYPTPROTECT_PROMPTSTRUCT;
+  PCryptProtectPromptStruct = ^TCryptProtectPromptStruct;
+
+
+//
+// base provider action
+//
+// #define CRYPTPROTECT_DEFAULT_PROVIDER   { 0xdf9d8cd0, 0x1501, 0x11d1, {0x8c, 0x7a, 0x00, 0xc0, 0x4f, 0xc2, 0x97, 0xeb} }
+
+//
+// CryptProtect PromptStruct dwPromtFlags
+//
+//
+// prompt on unprotect
+const
+  CRYPTPROTECT_PROMPT_ON_UNPROTECT    = $1;  // 1<<0
+//
+// prompt on protect
+  CRYPTPROTECT_PROMPT_ON_PROTECT      = $2;  // 1<<1
+  CRYPTPROTECT_PROMPT_RESERVED        = $04; // reserved, do not use.
+
+//
+// default to strong variant UI protection (user supplied password currently).
+  CRYPTPROTECT_PROMPT_STRONG          = $08; // 1<<3
+
+//
+// require strong variant UI protection (user supplied password currently).
+  CRYPTPROTECT_PROMPT_REQUIRE_STRONG  = $10; // 1<<4
+
+//
+// CryptProtectData and CryptUnprotectData dwFlags
+//
+// for remote-access situations where ui is not an option
+// if UI was specified on protect or unprotect operation, the call
+// will fail and GetLastError() will indicate ERROR_PASSWORD_RESTRICTION
+  CRYPTPROTECT_UI_FORBIDDEN = $1;
+
+//
+// per machine protected data -- any user on machine where CryptProtectData
+// took place may CryptUnprotectData
+  CRYPTPROTECT_LOCAL_MACHINE  = $4;
+
+//
+// force credential synchronize during CryptProtectData()
+// Synchronize is only operation that occurs during this operation
+  CRYPTPROTECT_CRED_SYNC  = $8;
+
+//
+// Generate an Audit on protect and unprotect operations
+//
+  CRYPTPROTECT_AUDIT  = $10;
+
+//
+// Protect data with a non-recoverable key
+//
+  CRYPTPROTECT_NO_RECOVERY  = $20;
+
+
+//
+// Verify the protection of a protected blob
+//
+  CRYPTPROTECT_VERIFY_PROTECTION  = $40;
+
+//
+// Regenerate the local machine protection
+//
+  CRYPTPROTECT_CRED_REGENERATE  = $80;
+
+// flags reserved for system use
+  CRYPTPROTECT_FIRST_RESERVED_FLAGVAL = $0FFFFFFF;
+  CRYPTPROTECT_LAST_RESERVED_FLAGVAL  = $FFFFFFFF;
+
+//
+// flags specific to base provider
+//
+
+
+function CryptProtectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
+  pOptionalEntropy: PDataBlob; pvReserved: PVOID;
+  pPromptStruct: PCryptProtectPromptStruct; dwFlags: DWORD;
+  pDataOut: PDataBlob): BOOL; stdcall;
+
+function CryptUnprotectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
+  pOptionalEntropy: PDataBlob; pvReserved: PVOID;
+  pPromptStruct: PCryptProtectPromptStruct; dwFlags: DWORD;
+  pDataOut: PDataBlob): BOOL; stdcall;
+
 implementation
 
 const
-  advapi32 = 'Advapi32.dll';
+  advapi32  = 'Advapi32.dll';
+  crypt32   = 'Crypt32.dll';
 
 function CryptAcquireContext; external advapi32 name 'CryptAcquireContextW';
 function CryptAcquireContextW; external advapi32;
@@ -312,5 +436,8 @@ function CryptGetKeyParam; external advapi32;
 function CryptSetKeyParam; external advapi32;
 function CryptDuplicateKey; external advapi32;
 function CryptDestroyKey; external advapi32;
+
+function CryptProtectData; external crypt32;
+function CryptUnprotectData; external crypt32;
 
 end.
