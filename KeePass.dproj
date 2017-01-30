@@ -84,10 +84,10 @@
             <Form>MainForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="KeePassLib.pas"/>
-        <DCCReference Include="KeePassLib.Wincrypt.pas"/>
-        <DCCReference Include="System.Security.Cryptography.pas"/>
-        <DCCReference Include="KeePassLib.BCrypt.pas"/>
+        <DCCReference Include="KeePassLib\KeePassLib.pas"/>
+        <DCCReference Include="KeePassLib\KeePassLib.Wincrypt.pas"/>
+        <DCCReference Include="KeePassLib\System.Security.Cryptography.pas"/>
+        <DCCReference Include="KeePassLib\KeePassLib.BCrypt.pas"/>
         <DCCReference Include="Forms\PasswordUnit.pas">
             <Form>PasswordForm</Form>
             <FormType>dfm</FormType>
@@ -501,13 +501,13 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Android" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="Win32" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
-                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
             </Deployment>
             <Platforms>
                 <Platform value="Win32">True</Platform>
