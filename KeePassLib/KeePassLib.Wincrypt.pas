@@ -286,6 +286,8 @@ function CryptDuplicateKey(hKey: HCRYPTKEY; pdwReserved: PDWORD; dwFlags: DWORD;
   out phKey: HCRYPTKEY): BOOL; stdcall;
 function CryptDestroyKey(hKey: HCRYPTKEY): BOOL; stdcall;
 
+function CryptGenRandom(hProv: HCRYPTPROV; dwLen: DWORD; pbBuffer: Pointer): BOOL; stdcall;
+
 { dpapi.h }
 
 const
@@ -436,6 +438,7 @@ function CryptGetKeyParam; external advapi32;
 function CryptSetKeyParam; external advapi32;
 function CryptDuplicateKey; external advapi32;
 function CryptDestroyKey; external advapi32;
+function CryptGenRandom; external advapi32;
 
 function CryptProtectData; external crypt32;
 function CryptUnprotectData; external crypt32;
