@@ -14,6 +14,8 @@ const
 
 resourcestring
   SFailedToParseKeePassXml = 'Failed to parse KeePass XML.';
+  SArgument_ArrayCannotBeEmty = 'Array ''%s'' cannot be empty.';
+  SArgument_ArraysMustBeTheSameSize = 'Arrays must be the same size.';
 
 type
   EKdbxError = class(Exception);
@@ -152,6 +154,17 @@ type
     procedure Close;
     function GetSHA256(const Data: TBytes): TBytes;
     destructor Destroy; override;
+  end;
+
+  TXorredBuffer = class
+  private
+    FData: TBytes;
+    FXorPad: TBytes;
+    function GetLength: NativeInt;
+  public
+    property Length: NativeInt read GetLength;
+    constructor Create(ProtectedData: TBytes; XorPad: TBytes);
+    function ReadPlainText: TBytes;
   end;
 
 implementation
@@ -1119,6 +1132,43 @@ begin
     if hProv <> 0 then
       CryptReleaseContext(hProv, 0);
   end;
+end;
+
+{ TXorredBuffer }
+
+constructor TXorredBuffer.Create(ProtectedData, XorPad: TBytes);
+begin
+  if ProtectedData = nil then
+    raise EArgumentNilException.Create('ProtectedData');
+  if System.Length(ProtectedData) <= 0 then
+    raise EArgumentException.Create(Format(SArgument_ArrayCannotBeEmty,
+      ['ProtectedData']));
+  if XorPad = nil then
+    raise EArgumentNilException.Create('XorPad');
+
+  if System.Length(ProtectedData) <> System.Length(XorPad) then
+    raise EArgumentException.Create(SArgument_ArraysMustBeTheSameSize);
+
+  FData := ProtectedData;
+  FXorPad := XorPad;
+end;
+
+function TXorredBuffer.GetLength: NativeInt;
+begin
+  Result := System.Length(FData);
+end;
+
+function TXorredBuffer.ReadPlainText: TBytes;
+var
+  Plain: TBytes;
+  I: NativeInt;
+begin
+  Plain := Copy(FData);
+
+  for I := 0 to System.Length(Plain) - 1 do
+    Plain[i] := FData[i] xor FXorPad[i];
+
+  Result := Plain;
 end;
 
 end.
