@@ -1,4 +1,4 @@
-{   This file is part of KeePass4D.                                       
+{   This file is part of KeePass4D.
 
     KeePass4D is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -304,6 +304,29 @@ type
 
     constructor Create(Stream: TStream; Transform: ICryptoTransform; Mode: TCryptoStreamMode);
     procedure FlushFinalBlock;
+  end;
+
+  TDataProtectionScope =
+  (
+    CurrentUser,
+    LocalMachine
+  );
+
+  TMemoryProtectionScope =
+  (
+    SameProcess,
+    CrossProcess,
+    SameLogon
+  );
+
+  TProtectedMemory = class
+  public
+    class function Protect(UserData: TBytes; OptionalEntropy: TBytes;
+      Scope: TDataProtectionScope): TBytes; static;
+    class function Unprotect(EncryptedData: TBytes; OptionalEntropy: TBytes;
+      Scope: TDataProtectionScope): TBytes; static;
+  strict protected
+    constructor Create;
   end;
 
 implementation
@@ -954,6 +977,99 @@ begin
   if InputCount < Length(InputBuffer) - InputOffset then
     raise EArgumentOutOfRangeException.Create(sCryptography_TransformBeyondEndOfBuffer);
 
+end;
+
+{ TProtectedMemory }
+
+constructor TProtectedMemory.Create;
+begin
+
+end;
+
+class function TProtectedMemory.Protect(UserData, OptionalEntropy: TBytes;
+  Scope: TDataProtectionScope): TBytes;
+var
+  DataIn, DataOut, Entropy: TDataBlob;
+  EntropyPtr: PDataBlob;
+  dwFlags: DWORD;
+begin
+  Result := nil;
+
+  if UserData = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['UserData']);
+
+  DataIn.cbData := Length(UserData);
+  DataIn.pbData := @UserData[0];
+
+  EntropyPtr := nil;
+  if Length(OptionalEntropy) > 0 then
+  begin
+    Entropy.cbData := Length(OptionalEntropy);
+    Entropy.pbData := @OptionalEntropy[0];
+    EntropyPtr := @Entropy;
+  end;
+
+  dwFlags := CRYPTPROTECT_UI_FORBIDDEN;
+  if Scope = TDataProtectionScope.LocalMachine then
+    dwFlags := dwFlags or CRYPTPROTECT_LOCAL_MACHINE;
+
+    FillChar(DataOut, SizeOf(TDataBlob), 0);
+  try
+    Win32Check(CryptProtectData(@DataIn, nil, EntropyPtr, nil, nil, dwFlags, @DataOut));
+    if DataOut.pbData = nil then
+      raise EOutOfMemory.Create('');
+    SetLength(Result, DataOut.cbData);
+    Move(PByte(DataOut.pbData)[0], Result[0], DataOut.cbData);
+  finally
+    if DataOut.pbData <> nil then
+    begin
+      ZeroMemory(DataOut.pbData, DataOut.cbData);
+      LocalFree(HLOCAL(DataOut.pbData));
+    end;
+  end;
+end;
+
+class function TProtectedMemory.Unprotect(EncryptedData,
+  OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes;
+var
+  DataIn, DataOut, Entropy: TDataBlob;
+  EntropyPtr: PDataBlob;
+  dwFlags: DWORD;
+begin
+  Result := nil;
+
+  if EncryptedData = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['EncryptedData']);
+
+  DataIn.cbData := Length(EncryptedData);
+  DataIn.pbData := @EncryptedData[0];
+
+  EntropyPtr := nil;
+  if Length(OptionalEntropy) > 0 then
+  begin
+    Entropy.cbData := Length(OptionalEntropy);
+    Entropy.pbData := @OptionalEntropy[0];
+    EntropyPtr := @Entropy;
+  end;
+
+  dwFlags := CRYPTPROTECT_UI_FORBIDDEN;
+  if Scope = TDataProtectionScope.LocalMachine then
+    dwFlags := dwFlags or CRYPTPROTECT_LOCAL_MACHINE;
+
+    FillChar(DataOut, SizeOf(TDataBlob), 0);
+  try
+    Win32Check(CryptUnprotectData(@DataIn, nil, EntropyPtr, nil, nil, dwFlags, @DataOut));
+    if DataOut.pbData = nil then
+      raise EOutOfMemory.Create('');
+    SetLength(Result, DataOut.cbData);
+    Move(PByte(DataOut.pbData)[0], Result[0], DataOut.cbData);
+  finally
+    if DataOut.pbData <> nil then
+    begin
+      ZeroMemory(DataOut.pbData, DataOut.cbData);
+      LocalFree(HLOCAL(DataOut.pbData));
+    end;
+  end;
 end;
 
 end.
