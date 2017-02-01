@@ -329,6 +329,15 @@ type
     constructor Create;
   end;
 
+  TRandomNumberGenerator = class abstract
+  strict protected
+    constructor Create;
+  public
+    procedure GetBytes(Data: TBytes); overload; virtual; abstract;
+    procedure GetBytes(Data: TBytes; Offset: Integer; Count: Integer); overload; virtual;
+    procedure GetNonZeroBytes(Data: TBytes); virtual;
+  end;
+
 implementation
 
 { THashAlgorithm }
@@ -1070,6 +1079,39 @@ begin
       LocalFree(HLOCAL(DataOut.pbData));
     end;
   end;
+end;
+
+{ TRandomNumberGenerator }
+
+constructor TRandomNumberGenerator.Create;
+begin
+
+end;
+
+procedure TRandomNumberGenerator.GetBytes(Data: TBytes; Offset, Count: Integer);
+var
+  TempData: TBytes;
+begin
+  if Data = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['Data']);
+  if Offset < 0 then
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['Offset']);
+  if Count < 0 then
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['Count']);
+  if Offset + Count > Length(Data) then
+    raise EArgumentException.Create(sArgumentOutOfRange_OffLenInvalid);
+
+  if Count > 0 then
+  begin
+    SetLength(TempData, Count);
+    GetBytes(TempData);
+    Data := Copy(TempData, Offset, Count);
+  end;
+end;
+
+procedure TRandomNumberGenerator.GetNonZeroBytes(Data: TBytes);
+begin
+  raise ENotImplemented.Create('');
 end;
 
 end.
