@@ -338,6 +338,16 @@ type
     procedure GetNonZeroBytes(Data: TBytes); virtual;
   end;
 
+  TRNGCryptoServiceProvider = class(TRandomNumberGenerator)
+  strict private
+    FProvHandle: HCRYPTPROV;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure GetBytes(Data: TBytes);
+    procedure GetNonZeroBytes(Data: TBytes); override;
+  end;
+
 implementation
 
 { THashAlgorithm }
@@ -1112,6 +1122,68 @@ end;
 procedure TRandomNumberGenerator.GetNonZeroBytes(Data: TBytes);
 begin
   raise ENotImplemented.Create('');
+end;
+
+{ TRNGCryptoServiceProvider }
+
+constructor TRNGCryptoServiceProvider.Create;
+begin
+  inherited;
+
+  Win32Check(CryptAcquireContext(FProvHandle, nil, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT));
+end;
+
+destructor TRNGCryptoServiceProvider.Destroy;
+begin
+  if FProvHandle <> 0 then
+    CryptReleaseContext(FProvHandle, 0);
+
+  inherited;
+end;
+
+procedure TRNGCryptoServiceProvider.GetBytes(Data: TBytes);
+begin
+  if Data = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['Data']);
+
+  Win32Check(CryptGenRandom(FProvHandle, Length(Data), @Data[0]));
+end;
+
+procedure TRNGCryptoServiceProvider.GetNonZeroBytes(Data: TBytes);
+var
+  IndexOfFirst0Byte: Integer;
+  I: Integer;
+  Tmp: TBytes;
+begin
+  GetBytes(Data);
+  IndexOfFirst0Byte := Length(Data);
+  for I := 0 to Length(Data) - 1 do
+    if Data[I] = 0 then
+    begin
+      IndexOfFirst0Byte := I;
+      Break;
+    end;
+
+  for I := IndexOfFirst0Byte to Length(Data) - 1 do
+    if Data[I] <> 0 then
+    begin
+      Data[IndexOfFirst0Byte] := Data[I];
+      Inc(IndexOfFirst0Byte);
+    end;
+
+  while IndexOfFirst0Byte < Length(Data) do
+  begin
+    SetLength(Tmp, 2 * (Length(Data) - IndexOfFirst0Byte));
+    GetBytes(Tmp);
+    for I := 0 to Length(Tmp) - 1 do
+      if Tmp[I] <> 0 then
+      begin
+        Data[IndexOfFirst0Byte] := Tmp[I];
+        Inc(IndexOfFirst0Byte);
+        if IndexOfFirst0Byte >= Length(Data) then
+          Break;
+      end;
+  end;
 end;
 
 end.
