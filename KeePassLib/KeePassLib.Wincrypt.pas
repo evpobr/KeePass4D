@@ -25,7 +25,41 @@ uses
   Winapi.Windows;
 
 const
-  PROV_RSA_AES = 24;
+  MS_DEF_PROV: PChar = 'Microsoft Base Cryptographic Provider v1.0';
+  MS_ENHANCED_PROV: PChar = 'Microsoft Enhanced Cryptographic Provider v1.0';
+  MS_STRONG_PROV: PChar = 'Microsoft Strong Cryptographic Provider';
+  MS_DEF_RSA_SIG_PROV: PChar = 'Microsoft RSA Signature Cryptographic Provider';
+  MS_DEF_RSA_SCHANNEL_PROV: PChar = 'Microsoft RSA SChannel Cryptographic Provider';
+  MS_DEF_DSS_PROV: PChar = 'Microsoft Base DSS Cryptographic Provider';
+  MS_DEF_DSS_DH_PROV: PChar = 'Microsoft Base DSS and Diffie-Hellman Cryptographic Provider';
+  MS_ENH_DSS_DH_PROV: PChar = 'Microsoft Enhanced DSS and Diffie-Hellman Cryptographic Provider';
+  MS_DEF_DH_SCHANNEL_PROV: PChar = 'Microsoft DH SChannel Cryptographic Provider';
+  MS_SCARD_PROV: PChar = 'Microsoft Base Smart Card Crypto Provider';
+  MS_ENH_RSA_AES_PROV: PChar = 'Microsoft Enhanced RSA and AES Cryptographic Provider';
+
+  PROV_RSA_FULL       = 1;
+  PROV_RSA_SIG        = 2;
+  PROV_DSS            = 3;
+  PROV_FORTEZZA       = 4;
+  PROV_MS_EXCHANGE    = 5;
+  PROV_MS_MAIL        = 5;
+  PROV_SSL            = 6;
+  PROV_STT_MER        = 7;
+  PROV_STT_ACQ        = 8;
+  PROV_STT_BRND       = 9;
+  PROV_STT_ROOT       = 10;
+  PROV_STT_ISS        = 11;
+  PROV_RSA_SCHANNEL   = 12;
+  PROV_DSS_DH         = 13;
+  PROV_EC_ECDSA_SIG   = 14;
+  PROV_EC_ECNRA_SIG   = 15;
+  PROV_EC_ECDSA_FULL  = 16;
+  PROV_EC_ECNRA_FULL  = 17;
+  PROV_DH_SCHANNEL    = 18;
+  PROV_SPYRUS_LYNKS   = 20;
+  PROV_RNG            = 21;
+  PROV_INTEL_SEC      = 22;
+  PROV_RSA_AES        = 24;
 
   CRYPT_VERIFYCONTEXT = $F0000000;
 
@@ -329,7 +363,7 @@ type
 //
 // base provider action
 //
-// #define CRYPTPROTECT_DEFAULT_PROVIDER   { 0xdf9d8cd0, 0x1501, 0x11d1, {0x8c, 0x7a, 0x00, 0xc0, 0x4f, 0xc2, 0x97, 0xeb} }
+//   CRYPTPROTECT_DEFAULT_PROVIDER   { 0xdf9d8cd0, 0x1501, 0x11d1, {0x8c, 0x7a, 0x00, 0xc0, 0x4f, 0xc2, 0x97, 0xeb} }
 
 //
 // CryptProtect PromptStruct dwPromtFlags
