@@ -432,6 +432,12 @@ const
 // flags specific to base provider
 //
 
+  CRYPTPROTECTMEMORY_BLOCK_SIZE     = 16;
+
+  CRYPTPROTECTMEMORY_SAME_PROCESS   = $0;
+  CRYPTPROTECTMEMORY_CROSS_PROCESS  = $1;
+  CRYPTPROTECTMEMORY_SAME_LOGON     = $2;
+
 
 function CryptProtectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
   pOptionalEntropy: PDataBlob; pvReserved: PVOID;
@@ -442,6 +448,11 @@ function CryptUnprotectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
   pOptionalEntropy: PDataBlob; pvReserved: PVOID;
   pPromptStruct: PCryptProtectPromptStruct; dwFlags: DWORD;
   pDataOut: PDataBlob): BOOL; stdcall;
+
+function CryptProtectMemory(pData: LPVOID; cbData: DWORD;
+  dwFlags: DWORD): BOOL; stdcall;
+function CryptUnprotectMemory(pData: LPVOID; cbData: DWORD;
+  dwFlags: DWORD): BOOL; stdcall;
 
 implementation
 
@@ -476,5 +487,8 @@ function CryptGenRandom; external advapi32;
 
 function CryptProtectData; external crypt32;
 function CryptUnprotectData; external crypt32;
+
+function CryptProtectMemory; external crypt32;
+function CryptUnprotectMemory; external crypt32;
 
 end.
