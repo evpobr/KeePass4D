@@ -320,7 +320,7 @@ type
     SameLogon
   );
 
-  TProtectedMemory = class
+  TProtectedData = class
   public
     class function Protect(UserData: TBytes; OptionalEntropy: TBytes;
       Scope: TDataProtectionScope): TBytes; static;
@@ -999,14 +999,14 @@ begin
 
 end;
 
-{ TProtectedMemory }
+{ TProtectedData }
 
-constructor TProtectedMemory.Create;
+constructor TProtectedData.Create;
 begin
 
 end;
 
-class function TProtectedMemory.Protect(UserData, OptionalEntropy: TBytes;
+class function TProtectedData.Protect(UserData, OptionalEntropy: TBytes;
   Scope: TDataProtectionScope): TBytes;
 var
   DataIn, DataOut, Entropy: TDataBlob;
@@ -1049,7 +1049,7 @@ begin
   end;
 end;
 
-class function TProtectedMemory.Unprotect(EncryptedData,
+class function TProtectedData.Unprotect(EncryptedData,
   OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes;
 var
   DataIn, DataOut, Entropy: TDataBlob;
