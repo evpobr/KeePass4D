@@ -29,7 +29,8 @@ resourcestring
   sCryptography_InvalidIVSize = 'Invalid IV size.';
   sCryptography_InvalidFeedbackSize = 'Invalid feedback size.';
   sCryptography_InvalidBlockSize = 'Invalid block size.';
-  sCryptography_TransformBeyondEndOfBuffer = 'InputCount';
+  sCryptography_InvalidCipherMode = 'Invalid cipher mode.';
+  sCryptography_InvalidPaddingMode = 'Invalid padding mode.';
 
 type
   TEncryptionMode = (Encrypt, Decrypt);
@@ -366,7 +367,7 @@ var
   Tmp: TBytes;
 begin
   if not Assigned(Buffer) then
-    raise EArgumentNilException.Create('Buffer');
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['Buffer']);
 
   HashCore(Buffer, 0, Length(Buffer));
   FHashValue := HashFinal;
@@ -381,13 +382,13 @@ var
   Tmp: TBytes;
 begin
   if not Assigned(Buffer) then
-    raise EArgumentNilException.Create('Buffer');
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['Buffer']);
   if Offset < 0 then
-    raise EArgumentOutOfRangeException.Create('');
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['Offset']);
   if (Count < 0) or (Count > Length(Buffer)) then
-    raise EArgumentException.Create('');
+    raise EArgumentException.Create(sArgumentInvalid);
   if (Length(Buffer) - Count) < Offset then
-    raise EArgumentException.Create('');
+    raise EArgumentException.Create(sArgumentOutOfRange_OffLenInvalid);
 
   HashCore(Buffer, Offset, Count);
   FHashValue := HashFinal;
@@ -467,9 +468,9 @@ function THashAlgorithm.TransformBlock(InputBuffer: TBytes; InputOffset,
   OutputOffset: Integer): Integer;
 begin
   if not Assigned(InputBuffer) then
-    raise EArgumentNilException.Create('InputBuffer');
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['InputBuffer']);
   if InputOffset < 0 then
-    raise EArgumentOutOfRangeException.Create('InputOffset');
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['InputOffset']);
   if (InputCount < 0) or (InputCount > Length(InputBuffer)) then
     raise EArgumentException.Create(sArgumentInvalid);
   if (Length(InputBuffer) - InputCount) < InputOffset then
@@ -491,9 +492,9 @@ var
   OutputBytes: TBytes;
 begin
   if InputBuffer = nil then
-    raise EArgumentNilException.Create('InputBuffer');
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['InputBuffer']);
   if InputOffset < 0 then
-    raise EArgumentOutOfRangeException.Create(sArgumentOutOfRange_NeedNonNegValue);
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['InputOffset']);
   if (InputCount < 0) or (InputCount > Length(InputBuffer)) then
     raise EArgumentException.Create(sArgumentInvalid);
   if Length(InputBuffer) -  InputCount < InputOffset then
@@ -754,7 +755,7 @@ end;
 
 procedure TSymmetricAlgorithm.SetIV(const Value: TBytes);
 begin
-  if Length(Value) <= 0 then
+  if Value = nil then
     raise EArgumentNilException.Create('Value');
 
   if Length(Value) <> (FBlockSize div 8) then
@@ -765,7 +766,7 @@ end;
 
 procedure TSymmetricAlgorithm.SetKey(const Value: TBytes);
 begin
-  if Length(Value) <= 0 then
+  if Value = nil then
     raise EArgumentNilException.Create('Key');
 
   if not ValidKeySize(Length(Value) * 8) then
@@ -778,7 +779,7 @@ end;
 procedure TSymmetricAlgorithm.SetKeySize(const Value: Integer);
 begin
   if not ValidKeySize(Value) then
-    raise ECryptographicException.Create('Error Message');
+    raise ECryptographicException.Create(SCryptography_InvalidKeySize);
 
   FKeySize := Value;
   FKey := nil;
@@ -787,7 +788,7 @@ end;
 procedure TSymmetricAlgorithm.SetMode(const Value: TCipherMode);
 begin
   if (Value < Low(TCipherMode)) or (Value > High(TCipherMode)) then
-    raise ECryptographicException.Create('Error Message');
+    raise ECryptographicException.Create(sCryptography_InvalidCipherMode);
 
   FMode := Value;
 end;
@@ -795,7 +796,7 @@ end;
 procedure TSymmetricAlgorithm.SetPadding(const Value: TPaddingMode);
 begin
   if (Value < Low(TPaddingMode)) or (Value > High(TPaddingMode)) then
-    raise ECryptographicException.Create('Error Message');
+    raise ECryptographicException.Create(sCryptography_InvalidPaddingMode);
 
   FPadding := Value;
 end;
@@ -987,14 +988,14 @@ var
 begin
   OutputData := nil;
 
-  if Length(InputBuffer) <= 0 then
-    raise EArgumentNilException.Create('InputBuffer');
+  if InputBuffer = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['InputBuffer']);
   if InputOffset < 0 then
-    raise EArgumentOutOfRangeException.Create('InputOffset');
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['InputOffset']);
   if InputCount < 0 then
-    raise EArgumentOutOfRangeException.Create('InputCount');
+    raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['InputCount']);
   if InputCount < Length(InputBuffer) - InputOffset then
-    raise EArgumentOutOfRangeException.Create(sCryptography_TransformBeyondEndOfBuffer);
+    raise EArgumentOutOfRangeException.Create(sArgumentOutOfRange_OffLenInvalid);
 
 end;
 
