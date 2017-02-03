@@ -492,3 +492,5 @@ function CryptProtectMemory; external crypt32;
 function CryptUnprotectMemory; external crypt32;
 
 end.
+
+

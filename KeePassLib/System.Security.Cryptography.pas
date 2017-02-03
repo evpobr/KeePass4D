@@ -31,6 +31,8 @@ resourcestring
   sCryptography_InvalidBlockSize = 'Invalid block size.';
   sCryptography_InvalidCipherMode = 'Invalid cipher mode.';
   sCryptography_InvalidPaddingMode = 'Invalid padding mode.';
+  SCryptography_DpApi_InvalidMemoryLength = 'Invalid memory block size.';
+  SArg_EnumIllegalVal = 'Illegal enum value.';
 
 type
   TEncryptionMode = (Encrypt, Decrypt);
@@ -326,6 +328,18 @@ type
       Scope: TDataProtectionScope): TBytes; static;
     class function Unprotect(EncryptedData: TBytes; OptionalEntropy: TBytes;
       Scope: TDataProtectionScope): TBytes; static;
+  strict protected
+    constructor Create;
+  end;
+
+  TProtectedMemory = class
+  strict private
+    class procedure VerifyScope(Scope: TMemoryProtectionScope); static;
+  public
+    class procedure Protect(UserData: TBytes;
+      Scope: TMemoryProtectionScope); static;
+    class procedure Unprotect(EncryptedData: TBytes;
+      Scope: TMemoryProtectionScope); static;
   strict protected
     constructor Create;
   end;
@@ -1185,6 +1199,48 @@ begin
           Break;
       end;
   end;
+end;
+
+{ TProtectedMemory }
+
+constructor TProtectedMemory.Create;
+begin
+
+end;
+
+class procedure TProtectedMemory.Protect(UserData: TBytes;
+  Scope: TMemoryProtectionScope);
+begin
+  if UserData = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['UserData']);
+
+  TProtectedMemory.VerifyScope(Scope);
+
+  if Length(UserData) mod CRYPTPROTECTMEMORY_BLOCK_SIZE <> 0 then
+    raise ECryptographicException.Create(SCryptography_DpApi_InvalidMemoryLength);
+
+  Win32Check(CryptProtectMemory(@UserData[0], Length(UserData), DWORD(Scope)));
+end;
+
+class procedure TProtectedMemory.Unprotect(EncryptedData: TBytes;
+  Scope: TMemoryProtectionScope);
+begin
+  if EncryptedData = nil then
+    raise EArgumentNilException.CreateFmt(SParamIsNil, ['EncryptedData']);
+
+  TProtectedMemory.VerifyScope(Scope);
+
+  if Length(EncryptedData) mod CRYPTPROTECTMEMORY_BLOCK_SIZE <> 0 then
+    raise ECryptographicException.Create(SCryptography_DpApi_InvalidMemoryLength);
+
+  Win32Check(CryptUnprotectMemory(@EncryptedData[0], Length(EncryptedData), DWORD(Scope)));
+end;
+
+class procedure TProtectedMemory.VerifyScope(Scope: TMemoryProtectionScope);
+begin
+  if (Scope < Low(TMemoryProtectionScope)) and
+     (Scope > High(TMemoryProtectionScope)) then
+     raise EArgumentException.Create(SArg_EnumIllegalVal);
 end;
 
 end.
