@@ -11,6 +11,7 @@ object MainForm: TMainForm
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -20,7 +21,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 0
     Width = 506
-    Height = 27
+    Height = 25
     UseSystemFont = False
     ActionManager = ActionManager
     Caption = 'ActionMainMenuBar'
@@ -51,7 +52,7 @@ object MainForm: TMainForm
   end
   object MainActionToolBar: TActionToolBar
     Left = 0
-    Top = 27
+    Top = 25
     Width = 506
     Height = 26
     ActionManager = ActionManager
@@ -98,6 +99,10 @@ object MainForm: TMainForm
             Action = FileOpen
             ImageIndex = 0
             ShortCut = 16463
+          end
+          item
+            Action = FileExit1
+            ImageIndex = 1
           end>
         ActionBar = MainActionToolBar
       end>
@@ -125,7 +130,7 @@ object MainForm: TMainForm
     Left = 168
     Top = 64
     Bitmap = {
-      494C0101020008000C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010102000800140010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

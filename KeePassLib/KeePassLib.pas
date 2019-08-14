@@ -25,7 +25,8 @@ type
 
   TCrsAlgorithm = (None, ArcFourVariant, Salsa20);
 
-  TMemoryProtectionMode = (ProtectTitle, ProtectUserName, ProtectPassword, ProtectURL, ProtectNotes);
+  TMemoryProtectionMode = (ProtectTitle, ProtectUserName, ProtectPassword,
+    ProtectURL, ProtectNotes);
 
   TMemoryProtection = set of TMemoryProtectionMode;
 
@@ -112,8 +113,10 @@ type
     procedure ReadHeader;
     function ReadHeaderField: Boolean;
     function GetCompositeKey(const APassword: string): TBytes;
-    function TransformKey(const CompositeKey: TBytes; Seed: TBytes; Rounds: UInt64): TBytes;
-    function GetMasterKey(const MasterSeed: TBytes; const TransformedKey: TBytes): TBytes;
+    function TransformKey(const CompositeKey: TBytes; Seed: TBytes;
+      Rounds: UInt64): TBytes;
+    function GetMasterKey(const MasterSeed: TBytes;
+      const TransformedKey: TBytes): TBytes;
     function DecryptDataStream(const AMasterKey: TBytes): TStream;
     function GetSHA256WinCrypt(const Data: TBytes): TBytes;
     procedure Deserialize(const Stream: TStream);
@@ -125,32 +128,48 @@ type
     property NameChanged: TDateTime read GetNameChanged;
     property Description: TStringList read GetDescription;
     property DescriptionChanged: TDateTime read GetDescriptionChanged;
-    property DefaultUserName: string read GetDefaultUserName write SetDefaultUserName;
+    property DefaultUserName: string read GetDefaultUserName
+      write SetDefaultUserName;
     property DefaultUsernameChanged: TDateTime read GetDefaultUsernameChanged;
-    property MaintenanceHistoryDays: Cardinal read GetMaintenanceHistoryDays write SetMaintenanceHistoryDays;
+    property MaintenanceHistoryDays: Cardinal read GetMaintenanceHistoryDays
+      write SetMaintenanceHistoryDays;
     property Color: TColor read GetColor write SetColor;
     property MasterKeyChanged: TDateTime read GetMasterKeyChanged;
-    property MasterKeyChangeRec: Int64 read GetMasterKeyChangeRec write SetMasterKeyChangeRec;
-    property MasterKeyChangeForce: Int64 read GetMasterKeyChangeForce write SetMasterKeyChangeForce;
-    property TMemoryProtection: TMemoryProtection read GetMemoryProtection write SetMemoryProtection;
+    property MasterKeyChangeRec: Int64 read GetMasterKeyChangeRec
+      write SetMasterKeyChangeRec;
+    property MasterKeyChangeForce: Int64 read GetMasterKeyChangeForce
+      write SetMasterKeyChangeForce;
+    property TMemoryProtection: TMemoryProtection read GetMemoryProtection
+      write SetMemoryProtection;
     property CustomIcons: TObjectDictionary<TGUID, TStream> read GetCustomIcons;
-    property RecycleBinEnabled: Boolean read GetRecycleBinEnabled write SetRecycleBinEnabled;
-    property RecycleBinUUID: TGUID read GetRecycleBinUUID write SetRecycleBinUUID;
+    property RecycleBinEnabled: Boolean read GetRecycleBinEnabled
+      write SetRecycleBinEnabled;
+    property RecycleBinUUID: TGUID read GetRecycleBinUUID
+      write SetRecycleBinUUID;
     property RecycleBinChanged: TDateTime read GetRecycleBinChanged;
-    property EntryTemplatesGroup: TGUID read GetEntryTemplatesGroup write SetEntryTemplatesGroup;
-    property EntryTemplatesGroupChanged: TDateTime read GetEntryTemplatesGroupChanged;
-    property HistoryMaxItems: Integer read GetHistoryMaxItems write SetHistoryMaxItems;
-    property HistoryMaxSize: Int64 read GetHistoryMaxSize write SetHistoryMaxSize;
-    property LastSelectedGroup: TGUID read GetLastSelectedGroup write SetLastSelectedGroup;
-    property LastTopVisibleGroup: TGUID read GetLastTopVisibleGroup write SetLastTopVisibleGroup;
+    property EntryTemplatesGroup: TGUID read GetEntryTemplatesGroup
+      write SetEntryTemplatesGroup;
+    property EntryTemplatesGroupChanged: TDateTime
+      read GetEntryTemplatesGroupChanged;
+    property HistoryMaxItems: Integer read GetHistoryMaxItems
+      write SetHistoryMaxItems;
+    property HistoryMaxSize: Int64 read GetHistoryMaxSize
+      write SetHistoryMaxSize;
+    property LastSelectedGroup: TGUID read GetLastSelectedGroup
+      write SetLastSelectedGroup;
+    property LastTopVisibleGroup: TGUID read GetLastTopVisibleGroup
+      write SetLastTopVisibleGroup;
     property CustomData: TDictionary<string, string> read GetCustomData;
 
     property IsOpen: Boolean read GetIsOpen;
 
     constructor Create; overload;
-    constructor Create(const APassword: string; Stream: TStream; AOwnsStream: Boolean = False); overload;
-    procedure LoadFromStream(const APassword: string; Stream: TStream; AOwnsStream: Boolean = True);
-    procedure LoadFromFile(const APassword: string; const FileName: string; AOwnStream: Boolean = True);
+    constructor Create(const APassword: string; Stream: TStream;
+      AOwnsStream: Boolean = False); overload;
+    procedure LoadFromStream(const APassword: string; Stream: TStream;
+      AOwnsStream: Boolean = True);
+    procedure LoadFromFile(const APassword: string; const FileName: string;
+      AOwnStream: Boolean = True);
     procedure Close;
     function GetSHA256(const Data: TBytes): TBytes;
     destructor Destroy; override;
@@ -170,37 +189,40 @@ type
 implementation
 
 uses
-  idGlobal, idHashSha, idZLib, KeePassLib.Wincrypt, System.Security.Cryptography,
+  idGlobal, idHashSha, idZLib, KeePassLib.Wincrypt,
+  System.Security.Cryptography,
   Xml.XmlDoc, Xml.XmlDom, Xml.XmlIntf, System.Variants, System.DateUtils,
   Vcl.GraphUtil, System.NetEncoding, System.StrUtils;
 
 const
   kfEndOfHeader = 0;
-	kfComment = 1;
-	kfCipherID = 2;
-	kfCompressionFlags = 3;
-	kfMasterSeed = 4;
-	kfTransformSeed = 5;
-	kfTransformRounds = 6;
-	kfEncryptionIV = 7;
-	kfProtectedStreamKey = 8;
-	kfStreamStartBytes = 9;
-	kfInnerRandomStreamID = 10;
+  kfComment = 1;
+  kfCipherID = 2;
+  kfCompressionFlags = 3;
+  kfMasterSeed = 4;
+  kfTransformSeed = 5;
+  kfTransformRounds = 6;
+  kfEncryptionIV = 7;
+  kfProtectedStreamKey = 8;
+  kfStreamStartBytes = 9;
+  kfInnerRandomStreamID = 10;
 
 type
+  TBLOBHeader = BLOBHEADER;
+
   TAes256KeyBlob = record
-    Header  : TBlobHeader;
-    KeySize : DWORD;
-    KeyData : array[0..31] of Byte;
+    Header: TBLOBHeader;
+    KeySize: DWORD;
+    KeyData: array [0 .. 31] of Byte;
   end;
 
   TKdbxPayloadAreaBlockHeader = packed record
-    ID      : DWORD;
-    Hash    : packed array[0..31] of Byte;
-    Size    : DWORD;
+    ID: DWORD;
+    Hash: packed array [0 .. 31] of Byte;
+    Size: DWORD;
   end;
 
-{ TKdbxFile }
+  { TKdbxFile }
 
 procedure TKdbxFile.Close;
 var
@@ -267,8 +289,8 @@ end;
 
 constructor TKdbxFile.Create;
 var
-  DataStream      : TStream;
-  CreationTime    : TDateTime;
+  DataStream: TStream;
+  CreationTime: TDateTime;
 begin
   inherited;
 
@@ -282,7 +304,8 @@ begin
   DataStream := nil;
 end;
 
-constructor TKdbxFile.Create(const APassword: string; Stream: TStream; AOwnsStream: Boolean);
+constructor TKdbxFile.Create(const APassword: string; Stream: TStream;
+  AOwnsStream: Boolean);
 begin
   Create;
 
@@ -291,9 +314,9 @@ end;
 
 procedure TKdbxFile.Deserialize(const Stream: TStream);
 
-  /// <summary>
-  ///   Checks is given string is valid web color.
-  /// </summary>
+/// <summary>
+/// Checks is given string is valid web color.
+/// </summary>
   function IsWebColorString(const WebColor: string): Boolean;
   var
     I: Integer;
@@ -303,26 +326,35 @@ procedure TKdbxFile.Deserialize(const Stream: TStream);
     if (Length(WebColor) < 6) or (Length(WebColor) > 7) then
       Exit;
     for I := 1 to Length(WebColor) do
-      if not CharInSet(WebColor[I], ['#', 'a'..'f', 'A'..'F', '0'..'9']) then
+      if not CharInSet(WebColor[I], ['#', 'a' .. 'f', 'A' .. 'F', '0' .. '9'])
+      then
         Exit;
 
     Result := True;
   end;
 
-
 var
   Xml: IXMLDocument;
   Root: IXMLNode;
   Meta: IXMLNode;
+  Groups: IXMLNode;
+  Entry: IXMLNode;
   MemoryProtectionNode: IXMLNode;
   vColor: OleVariant;
   OldNullStrictConvert: Boolean;
+  LValue: string;
+  LIdx: Integer;
 begin
   Xml := TXMLDocument.Create(nil);
   Xml.LoadFromStream(Stream);
   Root := Xml.DocumentElement;
   Meta := Root.ChildNodes['Meta'];
   if (Meta = nil) or (Meta.NodeName <> 'Meta') then
+    raise EKdbxError.Create(SFailedToParseKeePassXml);
+
+  Root := Root.ChildNodes['Root'];
+  Groups := Root.ChildNodes['Group'];
+  if (Groups = nil) or (Groups.NodeName <> 'Group') then
     raise EKdbxError.Create(SFailedToParseKeePassXml);
 
   OldNullStrictConvert := NullStrictConvert;
@@ -334,44 +366,74 @@ begin
     FName := Meta.ChildValues['DatabaseName'];
     FNameChanged := ISO8601ToDate(Meta.ChildValues['DatabaseNameChanged']);
     FDescription.Text := Meta.ChildValues['DatabaseDescription'];
-    FDescriptionChanged := ISO8601ToDate(Meta.ChildValues['DatabaseDescriptionChanged']);
+    FDescriptionChanged :=
+      ISO8601ToDate(Meta.ChildValues['DatabaseDescriptionChanged']);
     FDefaultUserName := Meta.ChildValues['DefaultUserName'];
-    FDefaultUsernameChanged := ISO8601ToDate(Meta.ChildValues['DefaultUserNameChanged']);
-    FMaintenanceHistoryDays := StrToUInt64Def(Meta.ChildValues['MaintenanceHistoryDays'], 365);
+    FDefaultUsernameChanged :=
+      ISO8601ToDate(Meta.ChildValues['DefaultUserNameChanged']);
+    FMaintenanceHistoryDays :=
+      StrToUInt64Def(Meta.ChildValues['MaintenanceHistoryDays'], 365);
     vColor := Meta.ChildValues['Color'];
     // To avoid exception when string is empty or in invalid format
     if IsWebColorString(vColor) then
       FColor := WebColorStrToColor(vColor);
 
     FMasterKeyChanged := ISO8601ToDate(Meta.ChildValues['MasterKeyChanged']);
-    FMasterKeyChangeRec := StrToIntDef(Meta.ChildValues['MasterKeyChanged'], -1);
-    FMasterKeyChangeForce := StrToInt64Def(Meta.ChildValues['MasterKeyChangeForce'], -1);
+    FMasterKeyChangeRec :=
+      StrToIntDef(Meta.ChildValues['MasterKeyChanged'], -1);
+    FMasterKeyChangeForce :=
+      StrToInt64Def(Meta.ChildValues['MasterKeyChangeForce'], -1);
 
     MemoryProtectionNode := Meta.ChildNodes['MemoryProtection'];
     if MemoryProtectionNode <> nil then
     begin
-      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectTitle'], False) then
+      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectTitle'], False)
+      then
         Include(FMemoryProtection, TMemoryProtectionMode.ProtectTitle);
-      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectUserName'], False) then
+      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectUserName'], False)
+      then
         Include(FMemoryProtection, TMemoryProtectionMode.ProtectUserName);
-      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectPassword'], True) then
+      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectPassword'], True)
+      then
         Include(FMemoryProtection, TMemoryProtectionMode.ProtectPassword);
-      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectURL'], False) then
+      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectURL'], False)
+      then
         Include(FMemoryProtection, TMemoryProtectionMode.ProtectURL);
-      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectNotes'], False) then
+      if StrToBoolDef(MemoryProtectionNode.ChildValues['ProtectNotes'], False)
+      then
         Include(FMemoryProtection, TMemoryProtectionMode.ProtectNotes);
     end;
     MemoryProtectionNode := nil;
 
-    FRecycleBinEnabled := StrToBoolDef(Meta.ChildValues['RecycleBinEnabled'], True);
-    FRecycleBinUUID := TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues['RecycleBinUUID']));
+    FRecycleBinEnabled :=
+      StrToBoolDef(Meta.ChildValues['RecycleBinEnabled'], True);
+    FRecycleBinUUID := TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes
+      (Meta.ChildValues['RecycleBinUUID']));
     FRecycleBinChanged := ISO8601ToDate(Meta.ChildValues['RecycleBinChanged']);
-    FEntryTemplatesGroup := TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues['EntryTemplatesGroup']));
-    FEntryTemplatesGroupChanged := ISO8601ToDate(Meta.ChildValues['EntryTemplatesGroupChanged']);
+    FEntryTemplatesGroup :=
+      TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues
+      ['EntryTemplatesGroup']));
+    FEntryTemplatesGroupChanged :=
+      ISO8601ToDate(Meta.ChildValues['EntryTemplatesGroupChanged']);
     FHistoryMaxItems := StrToIntDef(Meta.ChildValues['HistoryMaxItems'], -1);
     FHistoryMaxSize := StrToIntDef(Meta.ChildValues['HistoryMaxSize'], -1);
-    FLastSelectedGroup := TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues['LastSelectedGroup']));
-    FLastTopVisibleGroup := TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues['LastTopVisibleGroup']));
+    FLastSelectedGroup :=
+      TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues
+      ['LastSelectedGroup']));
+    FLastTopVisibleGroup :=
+      TGUID.Create(TNetEncoding.Base64.DecodeStringToBytes(Meta.ChildValues
+      ['LastTopVisibleGroup']));
+
+    for LIdx := 0 to Pred(Groups.ChildNodes.Count) do
+    begin
+      Entry := Groups.ChildNodes[LIdx];
+      if Entry.ChildNodes.Count > 0 then
+      begin
+        LValue := Entry.ChildNodes[0].XML;
+      end;
+
+    end;
+
   finally
     NullStrictConvert := OldNullStrictConvert;
   end;
@@ -397,7 +459,7 @@ end;
 function TKdbxFile.GetCompositeKey(const APassword: string): TBytes;
 var
   PasswordUTF8Bytes: TBytes;
-  PasswordHash  : TBytes;
+  PasswordHash: TBytes;
   Sha256: TSHA256CryptoServiceProvider;
 begin
   // Calculate hash of password
@@ -487,10 +549,10 @@ begin
   Result := FMaintenanceHistoryDays;
 end;
 
-function TKdbxFile.GetMasterKey(const MasterSeed,
-  TransformedKey: TBytes): TBytes;
+function TKdbxFile.GetMasterKey(const MasterSeed, TransformedKey
+  : TBytes): TBytes;
 var
-  ConcatKey : TBytes;
+  ConcatKey: TBytes;
   Sha256: TSHA256CryptoServiceProvider;
 begin
   if not Assigned(TransformedKey) then
@@ -503,7 +565,6 @@ begin
     raise EKdbxError.Create('');
 
   ConcatKey := TransformedKey + MasterSeed;
-
 
   Result := nil;
 
@@ -562,23 +623,26 @@ end;
 
 function TKdbxFile.GetSHA256WinCrypt(const Data: TBytes): TBytes;
 var
-  hProv     : HCRYPTPROV;
-  hHash     : HCRYPTHASH;
-  dwDataLen : DWORD;
+  hProv: HCRYPTPROV;
+  hHash: HCRYPTHASH;
+  dwDataLen: DWORD;
   dwHashSize: DWORD;
 begin
   Result := nil;
 
   try
-      Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES, CRYPT_VERIFYCONTEXT));
-      Win32Check(CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash));
-      dwDataLen := Length(Data);
-      Win32Check(CryptHashData(hHash, Data[0], dwDataLen, 0));
+    Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES,
+      CRYPT_VERIFYCONTEXT));
+    Win32Check(CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash));
+    dwDataLen := Length(Data);
+    Win32Check(CryptHashData(hHash, @Data[0], dwDataLen, 0));
     try
       dwDataLen := SizeOf(DWORD);
-      Win32Check(CryptGetHashParam(hHash, HP_HASHSIZE, dwHashSize, dwDataLen, 0));
+      Win32Check(CryptGetHashParam(hHash, HP_HASHSIZE, @dwHashSize,
+        dwDataLen, 0));
       SetLength(Result, dwHashSize);
-      Win32Check(CryptGetHashParam(hHash, HP_HASHVAL, Result[0], dwHashSize, 0));
+      Win32Check(CryptGetHashParam(hHash, HP_HASHVAL, @Result[0],
+        dwHashSize, 0));
     except
       Result := nil;
     end;
@@ -603,10 +667,10 @@ end;
 procedure TKdbxFile.LoadFromStream(const APassword: string; Stream: TStream;
   AOwnsStream: Boolean);
 var
-  CompositeKey    : TBytes;
-  TransformedKey  : TBytes;
-  MasterKey       : TBytes;
-  DataStream      : TStream;
+  CompositeKey: TBytes;
+  TransformedKey: TBytes;
+  MasterKey: TBytes;
+  DataStream: TStream;
 begin
   try
     Close;
@@ -625,7 +689,8 @@ begin
 
     ReadHeader;
 
-    TransformedKey := TransformKey(CompositeKey, FTransformSeed, FTransformRounds);
+    TransformedKey := TransformKey(CompositeKey, FTransformSeed,
+      FTransformRounds);
 
     MasterKey := GetMasterKey(TransformedKey, FMasterSeed);
 
@@ -682,11 +747,12 @@ begin
 
   BytesRead := FStream.Read(Sig1, SizeOf(Sig1));
   if BytesRead <> SizeOf(Sig1) then
-    raise EKdbxError.Create('Kdbx file header parse error: Sig1 field size <> 4 bytes.');
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: Sig1 field size <> 4 bytes.');
   BytesRead := FStream.Read(Sig2, SizeOf(Sig2));
   if BytesRead <> SizeOf(Sig2) then
-    raise EKdbxError.Create('Kdbx file header parse error: Sig2 field size <> 4 bytes.');
-
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: Sig2 field size <> 4 bytes.');
 
   // Check if Kdbx file is of unsupported 1.x version
   if (Sig1 = FileSignatureOld1) and (Sig2 = FileSignatureOld2) then
@@ -694,7 +760,8 @@ begin
 
   // Check if Kdbx is supported 2.x
   if ((Sig1 = FileSignature1) and (Sig2 = FileSignature2)) or
-      ((Sig1 = FileSignaturePreRelease1) and (Sig2 = FileSignaturePreRelease2)) then
+    ((Sig1 = FileSignaturePreRelease1) and (Sig2 = FileSignaturePreRelease2))
+  then
   begin
   end
   else
@@ -705,8 +772,10 @@ begin
   // Check version
   BytesRead := FStream.Read(Version, SizeOf(Version));
   if BytesRead <> SizeOf(Version) then
-    raise EKdbxError.Create('Kdbx file header parse error: Version field size <> 4 bytes.');
-  if (Version and FileVersionCriticalMask) > (FileVersion32 and FileVersionCriticalMask) then
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: Version field size <> 4 bytes.');
+  if (Version and FileVersionCriticalMask) >
+    (FileVersion32 and FileVersionCriticalMask) then
     raise EKdbxError.Create('Unsupported KeePass 2.x file.');
 
   while ReadHeaderField do
@@ -734,76 +803,85 @@ end;
 
 function TKdbxFile.ReadHeaderField: Boolean;
 var
-  BytesRead: LongInt;
+  BytesRead: Longint;
   FieldID: Byte;
   FieldSize: Word;
   FieldData: TBytes;
 begin
   BytesRead := FStream.Read(FieldID, SizeOf(FieldID));
   if BytesRead <> SizeOf(FieldID) then
-    raise EKdbxError.Create('Kdbx file header parse error: field ID read failed.');
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: field ID read failed.');
   BytesRead := FStream.Read(FieldSize, SizeOf(FieldSize));
   if BytesRead <> SizeOf(FieldSize) then
-    raise EKdbxError.Create('Kdbx file header parse error: field size read failed.');
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: field size read failed.');
   SetLength(FieldData, FieldSize);
   BytesRead := FStream.Read(FieldData[0], FieldSize);
   if BytesRead <> FieldSize then
-    raise EKdbxError.Create('Kdbx file header parse error: field data read failed.');
+    raise EKdbxError.Create
+      ('Kdbx file header parse error: field data read failed.');
 
   Result := True;
   case FieldID of
     kfEndOfHeader:
-    begin
-      Result := False;
-    end;
-    kfCipherID:
-    begin
-      FDataCipherUuid := TGUID.Create(FieldData);
-    end;
-    kfCompressionFlags:
-    begin
-      if FieldSize <> 4 then
-        raise EKdbxError.Create('Kdbx file header parse error: CompressionAlgorithm field size <> 4 bytes.');
-      case FieldData[0] of
-        0: FCompressionAlgorithm := TPwCompressionAlgorithm.None;
-        1: FCompressionAlgorithm := TPwCompressionAlgorithm.GZip;
-      else
-        raise EKdbxError.Create('Kdbx file header parse error: unknown compression algorithm.');
+      begin
+        Result := False;
       end;
-    end;
+    kfCipherID:
+      begin
+        FDataCipherUuid := TGUID.Create(FieldData);
+      end;
+    kfCompressionFlags:
+      begin
+        if FieldSize <> 4 then
+          raise EKdbxError.Create
+            ('Kdbx file header parse error: CompressionAlgorithm field size <> 4 bytes.');
+        case FieldData[0] of
+          0:
+            FCompressionAlgorithm := TPwCompressionAlgorithm.None;
+          1:
+            FCompressionAlgorithm := TPwCompressionAlgorithm.GZip;
+        else
+          raise EKdbxError.Create
+            ('Kdbx file header parse error: unknown compression algorithm.');
+        end;
+      end;
     kfMasterSeed:
-    begin
-      FMasterSeed := Copy(FieldData, 0, FieldSize);
-    end;
+      begin
+        FMasterSeed := Copy(FieldData, 0, FieldSize);
+      end;
     kfTransformSeed:
-    begin
-      FTransformSeed := Copy(FieldData, 0, FieldSize);
-    end;
+      begin
+        FTransformSeed := Copy(FieldData, 0, FieldSize);
+      end;
     kfTransformRounds:
-    begin
-      if FieldSize <> SizeOf(FTransformRounds) then
-        raise EKdbxError.Create('Kdbx file header parse error: TransformRounds field size <> 4 bytes.');
-      Move(FieldData[0], FTransformRounds, SizeOf(FTransformRounds));
-    end;
+      begin
+        if FieldSize <> SizeOf(FTransformRounds) then
+          raise EKdbxError.Create
+            ('Kdbx file header parse error: TransformRounds field size <> 4 bytes.');
+        Move(FieldData[0], FTransformRounds, SizeOf(FTransformRounds));
+      end;
     kfEncryptionIV:
-    begin
-      FEncryptionIV := Copy(FieldData, 0, FieldSize);
-    end;
+      begin
+        FEncryptionIV := Copy(FieldData, 0, FieldSize);
+      end;
     kfProtectedStreamKey:
-    begin
-      FProtectedStreamKey := Copy(FieldData, 0, FieldSize);
-    end;
+      begin
+        FProtectedStreamKey := Copy(FieldData, 0, FieldSize);
+      end;
     kfStreamStartBytes:
-    begin
-      FStreamStartBytes := Copy(FieldData, 0, FieldSize);
-    end;
+      begin
+        FStreamStartBytes := Copy(FieldData, 0, FieldSize);
+      end;
     kfInnerRandomStreamID:
-    begin
-      if FieldSize <> 4 then
-        raise EKdbxError.Create('Kdbx file header parse error: InnerRandomStreamID field size <> 4 bytes.');
-      Move(FieldData[0], FInnerRandomStreamID, SizeOf(FInnerRandomStreamID));
-    end
-    else
+      begin
+        if FieldSize <> 4 then
+          raise EKdbxError.Create
+            ('Kdbx file header parse error: InnerRandomStreamID field size <> 4 bytes.');
+        Move(FieldData[0], FInnerRandomStreamID, SizeOf(FInnerRandomStreamID));
+      end
+  else
     // Unknown, but correct fields?
     begin
     end;
@@ -895,11 +973,12 @@ end;
 
 function TKdbxFile.DecryptDataStream(const AMasterKey: TBytes): TStream;
 
-  function DecryptPayloadArea(const InputStream: TStream; hKey: HCRYPTKEY): TMemoryStream;
+  function DecryptPayloadArea(const InputStream: TStream; hKey: HCRYPTKEY)
+    : TMemoryStream;
   var
     DecryptedStream: TMemoryStream;
-    BytesRead      : DWORD;
-    ReadBuffer     : packed array[0..65536 - 1] of Byte;
+    BytesRead: DWORD;
+    ReadBuffer: packed array [0 .. 65536 - 1] of Byte;
   begin
     Assert(InputStream <> nil);
     Assert(hKey <> 0);
@@ -915,9 +994,9 @@ function TKdbxFile.DecryptDataStream(const AMasterKey: TBytes): TStream;
           Break;
 
         if BytesRead = SizeOf(ReadBuffer) then
-          Win32Check(CryptDecrypt(hKey, 0, False, 0, ReadBuffer[0], BytesRead))
+          Win32Check(CryptDecrypt(hKey, 0, False, 0, @ReadBuffer[0], BytesRead))
         else
-          Win32Check(CryptDecrypt(hKey, 0, True, 0, ReadBuffer[0], BytesRead));
+          Win32Check(CryptDecrypt(hKey, 0, True, 0, @ReadBuffer[0], BytesRead));
 
         DecryptedStream.Write(ReadBuffer[0], BytesRead);
       end;
@@ -949,44 +1028,46 @@ function TKdbxFile.DecryptDataStream(const AMasterKey: TBytes): TStream;
   end;
 
 var
-  hProv             : HCRYPTPROV;
-  hKey              : HCRYPTKEY;
-  KeyBlob           : TAes256KeyBlob;
-  BlockHeader       : TKdbxPayloadAreaBlockHeader;
-  AesMode           : DWORD;
+  hProv: HCRYPTPROV;
+  hKey: HCRYPTKEY;
+  KeyBlob: TAes256KeyBlob;
+  BlockHeader: TKdbxPayloadAreaBlockHeader;
+  AesMode: DWORD;
 
-  BytesRead         : DWORD;
-  ReadBuffer        : packed array[0..65536 - 1] of Byte;
-  I                 : NativeInt;
-  StartBytes        : TBytes;
-  StartBytesFail    : Boolean;
-  DecryptedStream   : TMemoryStream;
-  BlockData         : TBytes;
-  BlockDataHash     : TBytes;
-  DeblockedStream   : TMemoryStream;
+  BytesRead: DWORD;
+  ReadBuffer: packed array [0 .. 65536 - 1] of Byte;
+  I: NativeInt;
+  StartBytes: TBytes;
+  StartBytesFail: Boolean;
+  DecryptedStream: TMemoryStream;
+  BlockData: TBytes;
+  BlockDataHash: TBytes;
+  DeblockedStream: TMemoryStream;
   DecompressedStream: TMemoryStream;
 begin
   Result := nil;
 
   try
-    Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES, CRYPT_VERIFYCONTEXT));
+    Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES,
+      CRYPT_VERIFYCONTEXT));
     FillChar(KeyBlob, SizeOf(TAes256KeyBlob), 0);
-    KeyBlob.Header.bType    := PLAINTEXTKEYBLOB;
+    KeyBlob.Header.bType := PLAINTEXTKEYBLOB;
     KeyBlob.Header.bVersion := CUR_BLOB_VERSION;
     KeyBlob.Header.aiKeyAlg := CALG_AES_256;
     KeyBlob.KeySize := 32;
     Move(AMasterKey[0], KeyBlob.KeyData[0], 32);
     FillChar(AMasterKey[0], Length(AMasterKey), 0);
-    Win32Check(CryptImportKey(hProv, KeyBlob, SizeOf(TAes256KeyBlob), 0, 0, hKey));
+    Win32Check(CryptImportKey(hProv, @KeyBlob, SizeOf(TAes256KeyBlob), 0,
+      0, hKey));
 
-    Win32Check(CryptSetKeyParam(hKey, KP_IV, FEncryptionIV[0], 0));
+    Win32Check(CryptSetKeyParam(hKey, KP_IV, @FEncryptionIV[0], 0));
     AesMode := CRYPT_MODE_CBC;
-    Win32Check(CryptSetKeyParam(hKey, KP_MODE, AesMode, 0));
+    Win32Check(CryptSetKeyParam(hKey, KP_MODE, @AesMode, 0));
 
     // check pattern
     SetLength(StartBytes, Length(FStreamStartBytes));
     BytesRead := FStream.Read(ReadBuffer[0], Length(StartBytes));
-    Win32Check(CryptDecrypt(hKey, 0, False, 0, ReadBuffer[0], BytesRead));
+    Win32Check(CryptDecrypt(hKey, 0, False, 0, @ReadBuffer[0], BytesRead));
     Move(ReadBuffer[0], StartBytes[0], Length(StartBytes));
 
     StartBytesFail := False;
@@ -1026,8 +1107,10 @@ begin
 
           // Check block hash
           BlockDataHash := GetSHA256(BlockData);
-          if not CompareMem(@BlockHeader.Hash[0], @BlockDataHash[0], Length(BlockHeader.Hash)) then
-            raise EKdbxError.Create('Kdbx file is damaged, data block hash is incorrect.');
+          if not CompareMem(@BlockHeader.Hash[0], @BlockDataHash[0],
+            Length(BlockHeader.Hash)) then
+            raise EKdbxError.Create
+              ('Kdbx file is damaged, data block hash is incorrect.');
 
           // Write pure data
           DeblockedStream.Write(BlockData[0], Length(BlockData));
@@ -1073,14 +1156,14 @@ end;
 function TKdbxFile.TransformKey(const CompositeKey: TBytes; Seed: TBytes;
   Rounds: UInt64): TBytes;
 var
-  hProv           : HCRYPTPROV;
-  hKey            : HCRYPTKEY;
-  hHash           : HCRYPTHASH;
-  KeyBlob         : TAes256KeyBlob;
-  AesMode         : DWORD;
-  TransformedKey  : array[0..31] of Byte;
-  i               : UInt64;
-  dwDataLen       : DWORD;
+  hProv: HCRYPTPROV;
+  hKey: HCRYPTKEY;
+  hHash: HCRYPTHASH;
+  KeyBlob: TAes256KeyBlob;
+  AesMode: DWORD;
+  TransformedKey: array [0 .. 31] of Byte;
+  I: UInt64;
+  dwDataLen: DWORD;
 begin
   if not Assigned(CompositeKey) then
     raise EKdbxError.Create('CompositeKey argument cannot be nil!');
@@ -1096,30 +1179,35 @@ begin
   hKey := 0;
   hHash := 0;
 
- try
-    Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES, CRYPT_VERIFYCONTEXT));
+  try
+    Win32Check(CryptAcquireContext(hProv, nil, nil, PROV_RSA_AES,
+      CRYPT_VERIFYCONTEXT));
     FillChar(KeyBlob, SizeOf(TAes256KeyBlob), 0);
-    KeyBlob.Header.bType    := PLAINTEXTKEYBLOB;
+    KeyBlob.Header.bType := PLAINTEXTKEYBLOB;
     KeyBlob.Header.bVersion := CUR_BLOB_VERSION;
     KeyBlob.Header.aiKeyAlg := CALG_AES_256;
     KeyBlob.KeySize := 32;
     Move(FTransformSeed[0], KeyBlob.KeyData[0], 32);
-    Win32Check(CryptImportKey(hProv, KeyBlob, SizeOf(TAes256KeyBlob), 0, 0, hKey));
+    Win32Check(CryptImportKey(hProv, @KeyBlob, SizeOf(TAes256KeyBlob), 0,
+      0, hKey));
     AesMode := CRYPT_MODE_ECB;
-    Win32Check(CryptSetKeyParam(hKey, KP_MODE, AesMode, 0));
+    Win32Check(CryptSetKeyParam(hKey, KP_MODE, @AesMode, 0));
     Move(CompositeKey[0], TransformedKey[0], 32);
     dwDataLen := 16;
-    for i := 0 to Rounds - 1 do
+    for I := 0 to Rounds - 1 do
     begin
-      Win32Check(CryptEncrypt(hKey, 0, False, 0, TransformedKey[0], dwDataLen, 16));
-      Win32Check(CryptEncrypt(hKey, 0, False, 0, TransformedKey[16], dwDataLen, 16));
+      Win32Check(CryptEncrypt(hKey, 0, False, 0, @TransformedKey[0],
+        @dwDataLen, 16));
+      Win32Check(CryptEncrypt(hKey, 0, False, 0, @TransformedKey[16],
+        @dwDataLen, 16));
     end;
 
     try
       Win32Check(CryptCreateHash(hProv, CALG_SHA_256, 0, 0, hHash));
-      Win32Check(CryptHashData(hHash, TransformedKey[0], Length(TransformedKey), 0));
+      Win32Check(CryptHashData(hHash, @TransformedKey[0],
+        Length(TransformedKey), 0));
       dwDataLen := 32;
-      CryptGetHashParam(hHash, HP_HASHVAL, TransformedKey[0], dwDataLen, 0);
+      CryptGetHashParam(hHash, HP_HASHVAL, @TransformedKey[0], dwDataLen, 0);
       SetLength(Result, 32);
       Move(TransformedKey[0], Result[0], 32);
     finally
@@ -1166,7 +1254,7 @@ begin
   Plain := Copy(FData);
 
   for I := 0 to System.Length(Plain) - 1 do
-    Plain[i] := FData[i] xor FXorPad[i];
+    Plain[I] := FData[I] xor FXorPad[I];
 
   Result := Plain;
 end;

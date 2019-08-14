@@ -1,17 +1,17 @@
-{   This file is part of KeePass4D.
+{ This file is part of KeePass4D.
 
-    KeePass4D is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+  KeePass4D is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    KeePass4D is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  KeePass4D is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with KeePass4D.  If not, see <http://www.gnu.org/licenses/>. }
+  You should have received a copy of the GNU General Public License
+  along with KeePass4D.  If not, see <http://www.gnu.org/licenses/>. }
 
 unit System.Security.Cryptography;
 
@@ -34,63 +34,393 @@ resourcestring
   SCryptography_DpApi_InvalidMemoryLength = 'Invalid memory block size.';
   SArg_EnumIllegalVal = 'Illegal enum value.';
 
+const
+  // Algorithm classes
+  // certenrolld_begin -- ALG_CLASS_*
+  ALG_CLASS_ANY = 0;
+  ALG_CLASS_SIGNATURE = 1 shl 13;
+  ALG_CLASS_MSG_ENCRYPT = 2 shl 13;
+  ALG_CLASS_DATA_ENCRYPT = 3 shl 13;
+  ALG_CLASS_HASH = 4 shl 13;
+  ALG_CLASS_KEY_EXCHANGE = 5 shl 13;
+  ALG_CLASS_ALL = 7 shl 13;
+  // certenrolld_end
+
+  // Algorithm types
+  ALG_TYPE_ANY = 0;
+  ALG_TYPE_DSS = 1 shl 9;
+  ALG_TYPE_RSA = 2 shl 9;
+  ALG_TYPE_BLOCK = 3 shl 9;
+  ALG_TYPE_STREAM = 4 shl 9;
+  ALG_TYPE_DH = 5 shl 9;
+  ALG_TYPE_SECURECHANNEL = 6 shl 9;
+
+  // Generic sub-ids
+  ALG_SID_ANY = 0;
+
+  // Some RSA sub-ids
+  ALG_SID_RSA_ANY = 0;
+  ALG_SID_RSA_PKCS = 1;
+  ALG_SID_RSA_MSATWORK = 2;
+  ALG_SID_RSA_ENTRUST = 3;
+  ALG_SID_RSA_PGP = 4;
+
+  // Some DSS sub-ids
+  //
+  ALG_SID_DSS_ANY = 0;
+  ALG_SID_DSS_PKCS = 1;
+  ALG_SID_DSS_DMS = 2;
+  // #if (NTDDI_VERSION >= NTDDI_VISTA)
+  ALG_SID_ECDSA = 3;
+  // #endif //(NTDDI_VERSION >= NTDDI_VISTA)
+
+  // Block cipher sub ids
+  // DES sub_ids
+  ALG_SID_DES = 1;
+  ALG_SID_3DES = 3;
+  ALG_SID_DESX = 4;
+  ALG_SID_IDEA = 5;
+  ALG_SID_CAST = 6;
+  ALG_SID_SAFERSK64 = 7;
+  ALG_SID_SAFERSK128 = 8;
+  ALG_SID_3DES_112 = 9;
+  ALG_SID_CYLINK_MEK = 12;
+  ALG_SID_RC5 = 13;
+  // #if (NTDDI_VERSION >= NTDDI_WINXP)
+  ALG_SID_AES_128 = 14;
+  ALG_SID_AES_192 = 15;
+  ALG_SID_AES_256 = 16;
+  ALG_SID_AES = 17;
+  // (NTDDI_VERSION >= NTDDI_WINXP)
+
+  // Fortezza sub-ids
+  ALG_SID_SKIPJACK = 10;
+  ALG_SID_TEK = 11;
+
+  // KP_MODE
+  CRYPT_MODE_CBCI = 6; // ANSI CBC Interleaved
+  CRYPT_MODE_CFBP = 7; // ANSI CFB Pipelined
+  CRYPT_MODE_OFBP = 8; // ANSI OFB Pipelined
+  CRYPT_MODE_CBCOFM = 9; // ANSI CBC + OF Masking
+  CRYPT_MODE_CBCOFMI = 10; // ANSI CBC + OFM Interleaved
+
+  // RC2 sub-ids
+  ALG_SID_RC2 = 2;
+
+  // Stream cipher sub-ids
+  ALG_SID_RC4 = 1;
+  ALG_SID_SEAL = 2;
+
+  // Diffie-Hellman sub-ids
+  ALG_SID_DH_SANDF = 1;
+  ALG_SID_DH_EPHEM = 2;
+  ALG_SID_AGREED_KEY_ANY = 3;
+  ALG_SID_KEA = 4;
+  // #if (NTDDI_VERSION >= NTDDI_VISTA)
+  ALG_SID_ECDH = 5;
+  // (NTDDI_VERSION >= NTDDI_VISTA)
+
+  // Hash sub ids
+  ALG_SID_MD2 = 1;
+  ALG_SID_MD4 = 2;
+  ALG_SID_MD5 = 3;
+  ALG_SID_SHA = 4;
+  ALG_SID_SHA1 = 4;
+  ALG_SID_MAC = 5;
+  ALG_SID_RIPEMD = 6;
+  ALG_SID_RIPEMD160 = 7;
+  ALG_SID_SSL3SHAMD5 = 8;
+  ALG_SID_HMAC = 9;
+  ALG_SID_TLS1PRF = 10;
+  // #if (NTDDI_VERSION >= NTDDI_WINXP)
+  ALG_SID_HASH_REPLACE_OWF = 11;
+  // #endif //(NTDDI_VERSION >= NTDDI_WINXP)
+  // #if (NTDDI_VERSION > NTDDI_WINXPSP2)
+  ALG_SID_SHA_256 = 12;
+  ALG_SID_SHA_384 = 13;
+  ALG_SID_SHA_512 = 14;
+  // #endif //(NTDDI_VERSION > NTDDI_WINXPSP2)
+
+  // secure channel sub ids
+  ALG_SID_SSL3_MASTER = 1;
+  ALG_SID_SCHANNEL_MASTER_HASH = 2;
+  ALG_SID_SCHANNEL_MAC_KEY = 3;
+  ALG_SID_PCT1_MASTER = 4;
+  ALG_SID_SSL2_MASTER = 5;
+  ALG_SID_TLS1_MASTER = 6;
+  ALG_SID_SCHANNEL_ENC_KEY = 7;
+
+  // #if (NTDDI_VERSION >= NTDDI_VISTA)
+  // misc ECC sub ids
+  ALG_SID_ECMQV = 1;
+  // #endif //(NTDDI_VERSION >= NTDDI_VISTA)
+
+  // Our silly example sub-id
+  ALG_SID_EXAMPLE = 80;
+
+type
+  // certenrolls_begin -- PROV_ENUMALGS_EX
+  ALG_ID = UINT;
+  TAlgID = ALG_ID;
+  // certenrolls_end
+
+const
+  // algorithm identifier definitions
+  CALG_MD2 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_MD2;
+  CALG_MD4 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_MD4;
+  CALG_MD5 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_MD5;
+  CALG_SHA = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SHA;
+  CALG_SHA1 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SHA1;
+  CALG_MAC = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_MAC; // Deprecated. Don't use.
+  CALG_RSA_SIGN = ALG_CLASS_SIGNATURE or ALG_TYPE_RSA or ALG_SID_RSA_ANY;
+  CALG_DSS_SIGN = ALG_CLASS_SIGNATURE or ALG_TYPE_DSS or ALG_SID_DSS_ANY;
+  // #if (NTDDI_VERSION >= NTDDI_WINXP)
+  CALG_NO_SIGN = ALG_CLASS_SIGNATURE or ALG_TYPE_ANY or ALG_SID_ANY;
+  // #endif //(NTDDI_VERSION >= NTDDI_WINXP)
+  CALG_RSA_KEYX = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_RSA or ALG_SID_RSA_ANY;
+  CALG_DES = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_DES;
+  CALG_3DES_112 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_3DES_112;
+  CALG_3DES = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_3DES;
+  CALG_DESX = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_DESX;
+  CALG_RC2 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_RC2;
+  CALG_RC4 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_STREAM or ALG_SID_RC4;
+  CALG_SEAL = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_STREAM or ALG_SID_SEAL;
+  CALG_DH_SF = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_DH or ALG_SID_DH_SANDF;
+  CALG_DH_EPHEM = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_DH or ALG_SID_DH_EPHEM;
+  CALG_AGREEDKEY_ANY = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_DH or ALG_SID_AGREED_KEY_ANY;
+  CALG_KEA_KEYX = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_DH or ALG_SID_KEA;
+  CALG_HUGHES_MD5 = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_ANY or ALG_SID_MD5;
+  CALG_SKIPJACK = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_SKIPJACK;
+  CALG_TEK = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_TEK;
+  CALG_CYLINK_MEK = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_CYLINK_MEK; // Deprecated. Do not use
+  CALG_SSL3_SHAMD5 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SSL3SHAMD5;
+  CALG_SSL3_MASTER = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_SSL3_MASTER;
+  CALG_SCHANNEL_MASTER_HASH = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_SCHANNEL_MASTER_HASH;
+  CALG_SCHANNEL_MAC_KEY = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_SCHANNEL_MAC_KEY;
+  CALG_SCHANNEL_ENC_KEY = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_SCHANNEL_ENC_KEY;
+  CALG_PCT1_MASTER = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_PCT1_MASTER;
+  CALG_SSL2_MASTER = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_SSL2_MASTER;
+  CALG_TLS1_MASTER = ALG_CLASS_MSG_ENCRYPT or ALG_TYPE_SECURECHANNEL or ALG_SID_TLS1_MASTER;
+  CALG_RC5 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_RC5;
+  CALG_HMAC = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_HMAC;
+  CALG_TLS1PRF = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_TLS1PRF;
+  // #if (NTDDI_VERSION >= NTDDI_WINXP)
+  CALG_HASH_REPLACE_OWF = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_HASH_REPLACE_OWF;
+  CALG_AES_128 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_AES_128;
+  CALG_AES_192 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_AES_192;
+  CALG_AES_256 = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_AES_256;
+  CALG_AES = ALG_CLASS_DATA_ENCRYPT or ALG_TYPE_BLOCK or ALG_SID_AES;
+  // #endif //(NTDDI_VERSION >= NTDDI_WINXP)
+  // #if (NTDDI_VERSION > NTDDI_WINXPSP2)
+  CALG_SHA_256 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SHA_256;
+  CALG_SHA_384 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SHA_384;
+  CALG_SHA_512 = ALG_CLASS_HASH or ALG_TYPE_ANY or ALG_SID_SHA_512;
+  // #endif //(NTDDI_VERSION > NTDDI_WINXPSP2)
+  // #if (NTDDI_VERSION >= NTDDI_VISTA)
+  CALG_ECDH = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_DH or ALG_SID_ECDH;
+  CALG_ECMQV = ALG_CLASS_KEY_EXCHANGE or ALG_TYPE_ANY or ALG_SID_ECMQV;
+  CALG_ECDSA = ALG_CLASS_SIGNATURE or ALG_TYPE_DSS or ALG_SID_ECDSA;
+  // #endif //(NTDDI_VERSION >= NTDDI_VISTA)
+
+  // #if (NTDDI_VERSION < NTDDI_WINXP)
+  // resource number for signatures in the CSP
+  SIGNATURE_RESOURCE_NUMBER = $29A;
+
+  PROV_RSA_AES = 24;
+  crypt32   = 'Crypt32.dll';
+
+
+
+const
+
+//
+// Registry value for controlling Data Protection API (DPAPI) UI settings.
+//
+
+  szFORCE_KEY_PROTECTION: PAnsiChar = 'ForceKeyProtection';
+
+  dwFORCE_KEY_PROTECTION_DISABLED     = $0;
+  dwFORCE_KEY_PROTECTION_USER_SELECT  = $1;
+  dwFORCE_KEY_PROTECTION_HIGH         = $2;
+
+//
+// Data protection APIs enable applications to easily secure data.
+//
+// The base provider provides protection based on the users' logon
+// credentials. The data secured with these APIs follow the same
+// roaming characteristics as HKCU -- if HKCU roams, the data
+// protected by the base provider may roam as well. This makes
+// the API ideal for the munging of data stored in the registry.
+//
+
+//
+// Prompt struct -- what to tell users about the access
+//
+type
+  CRYPTPROTECT_PROMPTSTRUCT = record
+    cbSize        : DWORD;
+    dwPromptFlags : DWORD;
+    hwndApp       : HWND;
+    szPrompt      : LPCWSTR;
+  end;
+  TCryptProtectPromptStruct = CRYPTPROTECT_PROMPTSTRUCT;
+  PCryptProtectPromptStruct = ^TCryptProtectPromptStruct;
+
+
+//
+// base provider action
+//
+//   CRYPTPROTECT_DEFAULT_PROVIDER   { 0xdf9d8cd0, 0x1501, 0x11d1, {0x8c, 0x7a, 0x00, 0xc0, 0x4f, 0xc2, 0x97, 0xeb} }
+
+//
+// CryptProtect PromptStruct dwPromtFlags
+//
+//
+// prompt on unprotect
+const
+  CRYPTPROTECT_PROMPT_ON_UNPROTECT    = $1;  // 1<<0
+//
+// prompt on protect
+  CRYPTPROTECT_PROMPT_ON_PROTECT      = $2;  // 1<<1
+  CRYPTPROTECT_PROMPT_RESERVED        = $04; // reserved, do not use.
+
+//
+// default to strong variant UI protection (user supplied password currently).
+  CRYPTPROTECT_PROMPT_STRONG          = $08; // 1<<3
+
+//
+// require strong variant UI protection (user supplied password currently).
+  CRYPTPROTECT_PROMPT_REQUIRE_STRONG  = $10; // 1<<4
+
+//
+// CryptProtectData and CryptUnprotectData dwFlags
+//
+// for remote-access situations where ui is not an option
+// if UI was specified on protect or unprotect operation, the call
+// will fail and GetLastError() will indicate ERROR_PASSWORD_RESTRICTION
+  CRYPTPROTECT_UI_FORBIDDEN = $1;
+
+//
+// per machine protected data -- any user on machine where CryptProtectData
+// took place may CryptUnprotectData
+  CRYPTPROTECT_LOCAL_MACHINE  = $4;
+
+//
+// force credential synchronize during CryptProtectData()
+// Synchronize is only operation that occurs during this operation
+  CRYPTPROTECT_CRED_SYNC  = $8;
+
+//
+// Generate an Audit on protect and unprotect operations
+//
+  CRYPTPROTECT_AUDIT  = $10;
+
+//
+// Protect data with a non-recoverable key
+//
+  CRYPTPROTECT_NO_RECOVERY  = $20;
+
+
+//
+// Verify the protection of a protected blob
+//
+  CRYPTPROTECT_VERIFY_PROTECTION  = $40;
+
+//
+// Regenerate the local machine protection
+//
+  CRYPTPROTECT_CRED_REGENERATE  = $80;
+
+// flags reserved for system use
+  CRYPTPROTECT_FIRST_RESERVED_FLAGVAL = $0FFFFFFF;
+  CRYPTPROTECT_LAST_RESERVED_FLAGVAL  = $FFFFFFFF;
+
+//
+// flags specific to base provider
+//
+
+  CRYPTPROTECTMEMORY_BLOCK_SIZE     = 16;
+
+  CRYPTPROTECTMEMORY_SAME_PROCESS   = $0;
+  CRYPTPROTECTMEMORY_CROSS_PROCESS  = $1;
+  CRYPTPROTECTMEMORY_SAME_LOGON     = $2;
+
+
+function CryptProtectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
+  pOptionalEntropy: PDataBlob; pvReserved: PVOID;
+  pPromptStruct: PCryptProtectPromptStruct; dwFlags: DWORD;
+  pDataOut: PDataBlob): BOOL; stdcall;
+
+function CryptUnprotectData(pDataIn: PDataBlob; const szDataDescr: LPCWSTR;
+  pOptionalEntropy: PDataBlob; pvReserved: PVOID;
+  pPromptStruct: PCryptProtectPromptStruct; dwFlags: DWORD;
+  pDataOut: PDataBlob): BOOL; stdcall;
+
+function CryptProtectMemory(pData: LPVOID; cbData: DWORD;
+  dwFlags: DWORD): BOOL; stdcall;
+function CryptUnprotectMemory(pData: LPVOID; cbData: DWORD;
+  dwFlags: DWORD): BOOL; stdcall;
+
+
+
+  // TM
+
 type
   TEncryptionMode = (Encrypt, Decrypt);
 
   /// <summary>
-  ///   Defines the basic operations of cryptographic transformations.
+  /// Defines the basic operations of cryptographic transformations.
   /// </summary>
   ICryptoTransform = interface
-  ['{8ABAD867-F515-3CF6-BB62-5F0C88B3BB11}']
+    ['{8ABAD867-F515-3CF6-BB62-5F0C88B3BB11}']
     function GetCanReuseTransform: Boolean;
     function GetCanTransformMultipleBlocks: Boolean;
     function GetInputBlockSize: Integer;
     function GetOutputBlockSize: Integer;
 
     /// <summary>
-    ///   Gets the input block size.
+    /// Gets the input block size.
     /// </summary>
     property InputBlockSize: Integer read GetInputBlockSize;
 
     /// <summary>
-    ///   Gets the output block size.
+    /// Gets the output block size.
     /// </summary>
     property OutputBlockSize: Integer read GetOutputBlockSize;
 
     /// <summary>
-    ///   Gets a value indicating whether multiple blocks can be transformed.
+    /// Gets a value indicating whether multiple blocks can be transformed.
     /// </summary>
     property CanTransformMultipleBlocks: Boolean read GetCanTransformMultipleBlocks;
 
     /// <summary>
-    ///   Gets a value indicating whether the current transform can be reused.
+    /// Gets a value indicating whether the current transform can be reused.
     /// </summary>
     property CanReuseTransform: Boolean read GetCanReuseTransform;
 
-    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer;
-      InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
+    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
 
     /// <summary>
-    ///   Transforms the specified region of the specified byte array.
+    /// Transforms the specified region of the specified byte array.
     /// <param name="InputBuffer">
-    ///   The input for which to compute the transform.
+    /// The input for which to compute the transform.
     /// </param>
     /// <param name="InputOffset">
-    ///   The offset into the byte array from which to begin using data.
+    /// The offset into the byte array from which to begin using data.
     /// </param>
     /// <param name="InputCount">
-    ///   The number of bytes in the byte array to use as data.
+    /// The number of bytes in the byte array to use as data.
     /// </param>
     /// </summary>
     /// <returns>
-    ///   The computed transform.
+    /// The computed transform.
     /// </returns>
     /// <remarks>
-    ///   TransformFinalBlock is a special function for transforming the last
-    ///   block or a partial block in the stream. It returns a new array that
-    ///   contains the remaining transformed bytes. A new array is returned,
-    ///   because the amount of information returned at the end might be larger
-    ///   than a single block when padding is added.
+    /// TransformFinalBlock is a special function for transforming the last
+    /// block or a partial block in the stream. It returns a new array that
+    /// contains the remaining transformed bytes. A new array is returned,
+    /// because the amount of information returned at the end might be larger
+    /// than a single block when padding is added.
     /// </remarks>
     function TransformFinalBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer): TBytes;
   end;
@@ -99,8 +429,8 @@ type
   ECryptographicUnexpectedOperationException = class(ECryptographicException);
 
   /// <summary>
-  ///   Represents the base class from which all implementations of
-  ///   cryptographic hash algorithms must derive.
+  /// Represents the base class from which all implementations of
+  /// cryptographic hash algorithms must derive.
   /// </summary>
   THashAlgorithm = class abstract(TInterfacedObject, ICryptoTransform)
   strict protected
@@ -130,33 +460,32 @@ type
     function ComputeHash(Buffer: TBytes): TBytes; overload;
     function ComputeHash(Buffer: TBytes; Offset: Integer; Count: Integer): TBytes; overload;
     /// <summary>
-    ///   Computes the hash value for the specified region of the input byte
-    ///   array and copies the specified region of the input byte array to the
-    ///   specified region of the output byte array.
+    /// Computes the hash value for the specified region of the input byte
+    /// array and copies the specified region of the input byte array to the
+    /// specified region of the output byte array.
     /// <param name="InputBuffer">
-    ///   The input to compute the hash code for.
+    /// The input to compute the hash code for.
     /// </param>
     /// <param name="InputOffset">
-    ///   The offset into the input byte array from which to begin using data.
+    /// The offset into the input byte array from which to begin using data.
     /// </param>
     /// <param name="InputCount">
-    ///   The number of bytes in the input byte array to use as data.
+    /// The number of bytes in the input byte array to use as data.
     /// </param>
     /// <param name="OutputBuffer">
-    ///   A copy of the part of the input array used to compute the hash code.
+    /// A copy of the part of the input array used to compute the hash code.
     /// </param>
     /// <param name="OutputOffset">
-    ///   The offset into the output byte array from which to begin writing data.
+    /// The offset into the output byte array from which to begin writing data.
     /// </param>
     /// </summary>
     /// <returns>
-    ///   The number of bytes written.
+    /// The number of bytes written.
     /// </returns>
     /// <exception cref="System|EArgumentException">
-    ///   <paramref name="inputCount"/> uses an invalid value or inputBuffer has an invalid length.
+    /// <paramref name="inputCount"/> uses an invalid value or inputBuffer has an invalid length.
     /// </exception>
-    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer;
-      InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
+    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
     function TransformFinalBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer): TBytes;
     procedure Initialize; virtual; abstract;
   end;
@@ -177,8 +506,8 @@ type
   end;
 
   /// <summary>
-  ///   Represents the abstract base class from which all implementations of
-  ///   symmetric algorithms must inherit.
+  /// Represents the abstract base class from which all implementations of
+  /// symmetric algorithms must inherit.
   /// </summary>
   TSymmetricAlgorithm = class abstract
   private
@@ -219,7 +548,7 @@ type
     property Mode: TCipherMode read GetMode write SetMode;
     property Padding: TPaddingMode read GetPadding write SetPadding;
     function ValidKeySize(BitLength: Integer): Boolean;
-    function CreateEncryptor: ICryptoTransform;overload; virtual;
+    function CreateEncryptor: ICryptoTransform; overload; virtual;
     function CreateEncryptor(Key: TBytes; IV: TBytes): ICryptoTransform; overload; virtual; abstract;
     function CreateDecryptor: ICryptoTransform; overload; virtual;
     function CreateDecryptor(Key: TBytes; IV: TBytes): ICryptoTransform; overload; virtual; abstract;
@@ -239,10 +568,8 @@ type
     FPaddingMode: TPaddingMode;
     FProvider: HCRYPTPROV;
 
-    class function SetupKey(Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode;
-      FeedbackSize: Integer): HCRYPTKEY; static;
-    function DecryptBlocks(InputBuffer: TBytes; InputOffset: Integer;
-      InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
+    class function SetupKey(Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode; FeedbackSize: Integer): HCRYPTKEY; static;
+    function DecryptBlocks(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
     function RawDecryptBlocks(Buffer: TBytes; Offset: Integer; Count: Integer): Integer;
     function DepadBlock(Block: TBytes; Offset: Integer; Count: Integer): TBytes;
   protected
@@ -255,13 +582,11 @@ type
     property OutputBlockSize: Integer read GetOutputBlockSize;
     property CanTransformMultipleBlocks: Boolean read GetCanTransformMultipleBlocks;
     property CanReuseTransform: Boolean read GetCanReuseTransform;
-    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer;
-      InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
+    function TransformBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer; out OutputBuffer: TBytes; OutputOffset: Integer): Integer;
     function TransformFinalBlock(InputBuffer: TBytes; InputOffset: Integer; InputCount: Integer): TBytes;
 
-    constructor Create(BlockSize: Integer; FeedbackSize: Integer;
-      Provider: HCRYPTPROV; Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode;
-      PaddingMode: TPaddingMode; EncryptionMode: TEncryptionMode);
+    constructor Create(BlockSize: Integer; FeedbackSize: Integer; Provider: HCRYPTPROV; Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode;
+        PaddingMode: TPaddingMode; EncryptionMode: TEncryptionMode);
     destructor Destroy; override;
   end;
 
@@ -309,25 +634,14 @@ type
     procedure FlushFinalBlock;
   end;
 
-  TDataProtectionScope =
-  (
-    CurrentUser,
-    LocalMachine
-  );
+  TDataProtectionScope = (CurrentUser, LocalMachine);
 
-  TMemoryProtectionScope =
-  (
-    SameProcess,
-    CrossProcess,
-    SameLogon
-  );
+  TMemoryProtectionScope = (SameProcess, CrossProcess, SameLogon);
 
   TProtectedData = class
   public
-    class function Protect(UserData: TBytes; OptionalEntropy: TBytes;
-      Scope: TDataProtectionScope): TBytes; static;
-    class function Unprotect(EncryptedData: TBytes; OptionalEntropy: TBytes;
-      Scope: TDataProtectionScope): TBytes; static;
+    class function Protect(UserData: TBytes; OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes; static;
+    class function Unprotect(EncryptedData: TBytes; OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes; static;
   strict protected
     constructor Create;
   end;
@@ -336,10 +650,8 @@ type
   strict private
     class procedure VerifyScope(Scope: TMemoryProtectionScope); static;
   public
-    class procedure Protect(UserData: TBytes;
-      Scope: TMemoryProtectionScope); static;
-    class procedure Unprotect(EncryptedData: TBytes;
-      Scope: TMemoryProtectionScope); static;
+    class procedure Protect(UserData: TBytes; Scope: TMemoryProtectionScope); static;
+    class procedure Unprotect(EncryptedData: TBytes; Scope: TMemoryProtectionScope); static;
   strict protected
     constructor Create;
   end;
@@ -390,8 +702,7 @@ begin
   Result := Tmp;
 end;
 
-function THashAlgorithm.ComputeHash(Buffer: TBytes; Offset,
-  Count: Integer): TBytes;
+function THashAlgorithm.ComputeHash(Buffer: TBytes; Offset, Count: Integer): TBytes;
 var
   Tmp: TBytes;
 begin
@@ -413,9 +724,9 @@ end;
 
 function THashAlgorithm.ComputeHash(InputStream: TStream): TBytes;
 var
-  BytesRead : Longint;
-  Buffer    : TBytes;
-  Tmp       : TBytes;
+  BytesRead: Longint;
+  Buffer: TBytes;
+  Tmp: TBytes;
 begin
   BytesRead := 0;
   SetLength(Buffer, 4096);
@@ -477,9 +788,8 @@ begin
   Result := 1;
 end;
 
-function THashAlgorithm.TransformBlock(InputBuffer: TBytes; InputOffset,
-  InputCount: Integer; out OutputBuffer: TBytes;
-  OutputOffset: Integer): Integer;
+function THashAlgorithm.TransformBlock(InputBuffer: TBytes; InputOffset, InputCount: Integer; out OutputBuffer: TBytes;
+    OutputOffset: Integer): Integer;
 begin
   if not Assigned(InputBuffer) then
     raise EArgumentNilException.CreateFmt(SParamIsNil, ['InputBuffer']);
@@ -500,8 +810,7 @@ begin
   Result := InputCount;
 end;
 
-function THashAlgorithm.TransformFinalBlock(InputBuffer: TBytes; InputOffset,
-  InputCount: Integer): TBytes;
+function THashAlgorithm.TransformFinalBlock(InputBuffer: TBytes; InputOffset, InputCount: Integer): TBytes;
 var
   OutputBytes: TBytes;
 begin
@@ -511,7 +820,7 @@ begin
     raise EArgumentOutOfRangeException.CreateFmt(SParamIsNegative, ['InputOffset']);
   if (InputCount < 0) or (InputCount > Length(InputBuffer)) then
     raise EArgumentException.Create(sArgumentInvalid);
-  if Length(InputBuffer) -  InputCount < InputOffset then
+  if Length(InputBuffer) - InputCount < InputOffset then
     raise EArgumentException.Create(sArgumentOutOfRange_OffLenInvalid);
 
   HashCore(InputBuffer, InputOffset, InputCount);
@@ -545,8 +854,8 @@ begin
 
   if FHashHandle <> 0 then
     CryptDestroyHash(FHashHandle);
-    if FProvHandle <> 0 then
-      CryptReleaseContext(FProvHandle, 0);
+  if FProvHandle <> 0 then
+    CryptReleaseContext(FProvHandle, 0);
 end;
 
 constructor TCapiHash.Create(Algid: ALG_ID);
@@ -558,17 +867,16 @@ begin
   inherited Create;
 
   dwDataLen := SizeOf(DWORD);
-  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHSIZE, dwHashSize, dwDataLen, 0));
+  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHSIZE, @(dwHashSize), dwDataLen, 0));
   FHashSizeValue := dwHashSize * 8;
 end;
 
-function TCapiHash.HashCore(&Array: TBytes; ibStart,
-  cbSize: Integer): Integer;
+function TCapiHash.HashCore(&Array: TBytes; ibStart, cbSize: Integer): Integer;
 var
   dwDataLen: DWORD;
 begin
   dwDataLen := cbSize;
-  Win32Check(CryptHashData(FHashHandle, &Array[ibStart], dwDataLen, 0));
+  Win32Check(CryptHashData(FHashHandle, @&Array[ibStart], dwDataLen, 0));
 
   Result := cbSize;
 end;
@@ -578,9 +886,9 @@ var
   dwDataLen, dwHashSize: DWORD;
 begin
   dwDataLen := SizeOf(DWORD);
-  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHSIZE, dwHashSize, dwDataLen, 0));
+  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHSIZE, @(dwHashSize), dwDataLen, 0));
   SetLength(FHashValue, dwHashSize);
-  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHVAL, FHashValue[0], dwHashSize, 0));
+  Win32Check(CryptGetHashParam(FHashHandle, HP_HASHVAL, @(FHashValue[0]), dwHashSize, 0));
 
   Result := Copy(FHashValue);
 end;
@@ -602,8 +910,7 @@ end;
 
 { TCryptoStream }
 
-constructor TCryptoStream.Create(Stream: TStream; Transform: ICryptoTransform;
-  Mode: TCryptoStreamMode);
+constructor TCryptoStream.Create(Stream: TStream; Transform: ICryptoTransform; Mode: TCryptoStreamMode);
 begin
   inherited Create;
 
@@ -620,7 +927,7 @@ begin
   if FFinalBlockTransformed then
     raise ENotSupportedException.Create(SCryptographyCryptoStreamFlushFinalBlockTwice);
 
-  FinalBytes := FTransform.TransformFinalBlock(FInputBuffer, 0,FInputBufferIndex);
+  FinalBytes := FTransform.TransformFinalBlock(FInputBuffer, 0, FInputBufferIndex);
   FFinalBlockTransformed := True;
 
   FStream.Write(FOutputBuffer, 0, FOutputBufferIndex);
@@ -739,8 +1046,8 @@ begin
     end
     else
     begin
-      J := FLegalBlockSizes[i].MinSize;
-      while J <= FLegalBlockSizes[i].MaxSize do
+      J := FLegalBlockSizes[I].MinSize;
+      while J <= FLegalBlockSizes[I].MaxSize do
       begin
         if J = Value then
         begin
@@ -751,7 +1058,7 @@ begin
           end;
           Exit;
         end;
-        Inc(J, FLegalBlockSizes[i].SkipSize);
+        Inc(J, FLegalBlockSizes[I].SkipSize);
       end;
     end;
   end;
@@ -784,7 +1091,7 @@ begin
     raise EArgumentNilException.Create('Key');
 
   if not ValidKeySize(Length(Value) * 8) then
-    raise ECryptographicException.Create(sCryptography_InvalidKeySize);
+    raise ECryptographicException.Create(SCryptography_InvalidKeySize);
 
   FKey := Copy(Value);
   FKeySize := Length(Value) * 8;
@@ -849,9 +1156,8 @@ end;
 
 { TCapiSymmetricAlgorithm }
 
-constructor TCapiSymmetricAlgorithm.Create(BlockSize, FeedbackSize: Integer;
-  Provider: HCRYPTPROV; Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode;
-  PaddingMode: TPaddingMode; EncryptionMode: TEncryptionMode);
+constructor TCapiSymmetricAlgorithm.Create(BlockSize, FeedbackSize: Integer; Provider: HCRYPTPROV; Key: HCRYPTKEY; IV: TBytes;
+    CipherMode: TCipherMode; PaddingMode: TPaddingMode; EncryptionMode: TEncryptionMode);
 begin
   inherited Create;
 
@@ -871,9 +1177,8 @@ begin
   FKey := SetupKey(Key, IV, CipherMode, FeedbackSize);
 end;
 
-function TCapiSymmetricAlgorithm.DecryptBlocks(InputBuffer: TBytes; InputOffset,
-  InputCount: Integer; out OutputBuffer: TBytes;
-  OutputOffset: Integer): Integer;
+function TCapiSymmetricAlgorithm.DecryptBlocks(InputBuffer: TBytes; InputOffset, InputCount: Integer; out OutputBuffer: TBytes;
+    OutputOffset: Integer): Integer;
 var
   DecryptedBytes: Integer;
   DepadDecryptLength: Integer;
@@ -912,8 +1217,7 @@ begin
   Result := DecryptedBytes;
 end;
 
-function TCapiSymmetricAlgorithm.DepadBlock(Block: TBytes; Offset,
-  Count: Integer): TBytes;
+function TCapiSymmetricAlgorithm.DepadBlock(Block: TBytes; Offset, Count: Integer): TBytes;
 var
   PadBytes: TBytes;
 begin
@@ -952,20 +1256,18 @@ begin
   Result := FBlockSize div 8;
 end;
 
-function TCapiSymmetricAlgorithm.RawDecryptBlocks(Buffer: TBytes; Offset,
-  Count: Integer): Integer;
+function TCapiSymmetricAlgorithm.RawDecryptBlocks(Buffer: TBytes; Offset, Count: Integer): Integer;
 var
-  DataLength: Integer;
+  DataLength: Cardinal;
 begin
   DataLength := Count;
 
-  Win32Check(CryptDecrypt(FKey, 0, False, 0, Buffer[Offset], DataLength));
+  Win32Check(CryptDecrypt(FKey, 0, False, 0, @(Buffer[Offset]), DataLength));
 
   Result := DataLength;
 end;
 
-class function TCapiSymmetricAlgorithm.SetupKey(Key: HCRYPTKEY; IV: TBytes;
-  CipherMode: TCipherMode; FeedbackSize: Integer): HCRYPTKEY;
+class function TCapiSymmetricAlgorithm.SetupKey(Key: HCRYPTKEY; IV: TBytes; CipherMode: TCipherMode; FeedbackSize: Integer): HCRYPTKEY;
 var
   EncryptionKey: HCRYPTKEY;
   dwData: DWORD;
@@ -977,26 +1279,24 @@ begin
   CryptDuplicateKey(Key, nil, 0, EncryptionKey);
 
   dwData := DWORD(CipherMode);
-  CryptSetKeyParam(EncryptionKey, KP_MODE, dwData, 0);
+  CryptSetKeyParam(EncryptionKey, KP_MODE, @(dwData), 0);
 
   if CipherMode <> TCipherMode.ECB then
-    CryptSetKeyParam(EncryptionKey, KP_IV, IV[0], 0);
+    CryptSetKeyParam(EncryptionKey, KP_IV, @(IV[0]), 0);
 
   if (CipherMode = TCipherMode.CFB) or (CipherMode = TCipherMode.OFB) then
-    CryptSetKeyParam(EncryptionKey, KP_MODE_BITS, IV[0], 0);
+    CryptSetKeyParam(EncryptionKey, KP_MODE_BITS, @(IV[0]), 0);
 
   Result := EncryptionKey;
 end;
 
-function TCapiSymmetricAlgorithm.TransformBlock(InputBuffer: TBytes;
-  InputOffset, InputCount: Integer; out OutputBuffer: TBytes;
-  OutputOffset: Integer): Integer;
+function TCapiSymmetricAlgorithm.TransformBlock(InputBuffer: TBytes; InputOffset, InputCount: Integer; out OutputBuffer: TBytes;
+    OutputOffset: Integer): Integer;
 begin
 
 end;
 
-function TCapiSymmetricAlgorithm.TransformFinalBlock(InputBuffer: TBytes;
-  InputOffset, InputCount: Integer): TBytes;
+function TCapiSymmetricAlgorithm.TransformFinalBlock(InputBuffer: TBytes; InputOffset, InputCount: Integer): TBytes;
 var
   OutputData: TBytes;
 begin
@@ -1020,8 +1320,7 @@ begin
 
 end;
 
-class function TProtectedData.Protect(UserData, OptionalEntropy: TBytes;
-  Scope: TDataProtectionScope): TBytes;
+class function TProtectedData.Protect(UserData, OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes;
 var
   DataIn, DataOut, Entropy: TDataBlob;
   EntropyPtr: PDataBlob;
@@ -1047,7 +1346,7 @@ begin
   if Scope = TDataProtectionScope.LocalMachine then
     dwFlags := dwFlags or CRYPTPROTECT_LOCAL_MACHINE;
 
-    FillChar(DataOut, SizeOf(TDataBlob), 0);
+  FillChar(DataOut, SizeOf(TDataBlob), 0);
   try
     Win32Check(CryptProtectData(@DataIn, nil, EntropyPtr, nil, nil, dwFlags, @DataOut));
     if DataOut.pbData = nil then
@@ -1063,8 +1362,7 @@ begin
   end;
 end;
 
-class function TProtectedData.Unprotect(EncryptedData,
-  OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes;
+class function TProtectedData.Unprotect(EncryptedData, OptionalEntropy: TBytes; Scope: TDataProtectionScope): TBytes;
 var
   DataIn, DataOut, Entropy: TDataBlob;
   EntropyPtr: PDataBlob;
@@ -1090,7 +1388,7 @@ begin
   if Scope = TDataProtectionScope.LocalMachine then
     dwFlags := dwFlags or CRYPTPROTECT_LOCAL_MACHINE;
 
-    FillChar(DataOut, SizeOf(TDataBlob), 0);
+  FillChar(DataOut, SizeOf(TDataBlob), 0);
   try
     Win32Check(CryptUnprotectData(@DataIn, nil, EntropyPtr, nil, nil, dwFlags, @DataOut));
     if DataOut.pbData = nil then
@@ -1208,8 +1506,7 @@ begin
 
 end;
 
-class procedure TProtectedMemory.Protect(UserData: TBytes;
-  Scope: TMemoryProtectionScope);
+class procedure TProtectedMemory.Protect(UserData: TBytes; Scope: TMemoryProtectionScope);
 begin
   if UserData = nil then
     raise EArgumentNilException.CreateFmt(SParamIsNil, ['UserData']);
@@ -1222,8 +1519,7 @@ begin
   Win32Check(CryptProtectMemory(@UserData[0], Length(UserData), DWORD(Scope)));
 end;
 
-class procedure TProtectedMemory.Unprotect(EncryptedData: TBytes;
-  Scope: TMemoryProtectionScope);
+class procedure TProtectedMemory.Unprotect(EncryptedData: TBytes; Scope: TMemoryProtectionScope);
 begin
   if EncryptedData = nil then
     raise EArgumentNilException.CreateFmt(SParamIsNil, ['EncryptedData']);
@@ -1238,9 +1534,17 @@ end;
 
 class procedure TProtectedMemory.VerifyScope(Scope: TMemoryProtectionScope);
 begin
-  if (Scope < Low(TMemoryProtectionScope)) and
-     (Scope > High(TMemoryProtectionScope)) then
-     raise EArgumentException.Create(SArg_EnumIllegalVal);
+  if (Scope < Low(TMemoryProtectionScope)) and (Scope > High(TMemoryProtectionScope)) then
+    raise EArgumentException.Create(SArg_EnumIllegalVal);
 end;
 
+
+function CryptProtectData; external crypt32;
+function CryptUnprotectData; external crypt32;
+
+function CryptProtectMemory; external crypt32;
+function CryptUnprotectMemory; external crypt32;
+
+
 end.
+

@@ -1,25 +1,27 @@
-{   This file is part of KeePass4D.                                       
+{ This file is part of KeePass4D.
 
-    KeePass4D is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+  KeePass4D is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    KeePass4D is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  KeePass4D is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with KeePass4D.  If not, see <http://www.gnu.org/licenses/>. }
-	
+  You should have received a copy of the GNU General Public License
+  along with KeePass4D.  If not, see <http://www.gnu.org/licenses/>. }
+
 unit MainUnit;
 
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.Generics.Collections, System.Types, KeePassLib,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  System.Generics.Collections, System.Types, KeePassLib,
   PasswordUnit, System.Actions, Vcl.ActnList, Vcl.ToolWin, Vcl.ActnMan,
   Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.PlatformDefaultStyleActnCtrls, Vcl.StdActns,
   System.ImageList, Vcl.ImgList, Vcl.ComCtrls, Vcl.AppEvnts, System.IOUtils,
@@ -46,6 +48,7 @@ type
     { Private declarations }
     FKdbx: TKdbxFile;
     FFileName: string;
+    procedure LoadFile;
   public
     { Public declarations }
   end;
@@ -78,14 +81,15 @@ begin
 
     repeat
       mr := PasswordForm.ShowModal;
-      if  mr = mrCancel then
+      if mr = mrCancel then
         Break;
 
       try
         FKdbx.LoadFromFile(PasswordForm.Password, FileOpen.Dialog.FileName);
         PasswordIsCorrect := True;
         FFileName := FileOpen.Dialog.FileName;
-        Caption := Format('%s - %s', [DefaultApplicationTitle, TPath.GetFileNameWithoutExtension(FFileName)]);
+        Caption := Format('%s - %s', [DefaultApplicationTitle,
+          TPath.GetFileNameWithoutExtension(FFileName)]);
       except
         on E: EKdbxPasswordError do
         begin
@@ -94,9 +98,9 @@ begin
         end
       end;
     until PasswordIsCorrect = True;
-
   finally
     PasswordForm.Free;
+    LoadFile;
   end;
 end;
 
@@ -108,6 +112,14 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FKdbx.Free;
+end;
+
+procedure TMainForm.LoadFile;
+begin
+  if FKdbx.IsOpen then
+  begin
+
+  end;
 end;
 
 end.
